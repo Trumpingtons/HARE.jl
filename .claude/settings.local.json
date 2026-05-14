@@ -1,7 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(julia --project=. -e \"using HAE; println\\(\\\\\"HAE loaded OK\\\\\"\\); println\\(\\\\\"panel_prais_winsten: \\\\\", panel_prais_winsten\\)\")"
-    ]
+    "allow": []
   }
 }

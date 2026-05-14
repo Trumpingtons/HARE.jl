@@ -9,7 +9,7 @@ HARE.jl provides eight classical estimators covering three error structures:
 |:----------------|:-----------|
 | Multiplicative heteroskedasticity | [`two_step_harvey`](@ref), [`iterated_harvey`](@ref) |
 | AR(1) autocorrelation | [`two_step_prais_winsten`](@ref), [`iterated_prais_winsten`](@ref), [`hildreth_lu`](@ref) |
-| AR(1) + heteroskedasticity | [`two_step_haegls`](@ref), [`iterated_haegls`](@ref) |
+| AR(1) + heteroskedasticity | [`two_step_sequential`](@ref), [`iterated_sequential`](@ref), [`two_step_joint`](@ref), [`iterated_joint`](@ref) |
 | AR(1) exact MLE | [`beach_mackinnon`](@ref) |
 
 All estimators return typed result structs that implement the
@@ -20,7 +20,7 @@ All estimators return typed result structs that implement the
 
 ```julia
 using Pkg
-Pkg.add(url = "https://github.com/YOUR_GITHUB_USERNAME/HARE.jl")
+Pkg.add(url = "https://github.com/Trumpingtons/HARE.jl")
 ```
 
 ## Quick Start

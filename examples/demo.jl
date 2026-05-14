@@ -94,19 +94,19 @@ println("Hildreth–Lu             β̂ = ", round.(coef(hl), digits=3))
 println("                        ρ̂ = ", round(hl.rho, digits=4),
         "  RSS = ", round(hl.rss, digits=2))
 
-# ## Joint AR(1) + Heteroskedasticity Correction
+# ## Sequential AR(1) + Heteroskedasticity Correction
 #
-# HARE-GLS (Oberhofer–Kmenta 1974) corrects for both error structures simultaneously.
+# Sequential HARE (Oberhofer–Kmenta 1974) corrects for both error structures simultaneously.
 
-# **Two-step HARE-GLS**:
-hae2 = two_step_haegls(X, y_hae)
-println("\nTwo-Step HARE-GLS   β̂ = ", round.(coef(hae2), digits=3))
-println("                   ρ̂ = ", round(hae2.rho, digits=4))
+# **Two-step Sequential**:
+hae2 = two_step_sequential(X, y_hae)
+println("\nTwo-Step Sequential  β̂ = ", round.(coef(hae2), digits=3))
+println("                    ρ̂ = ", round(hae2.rho, digits=4))
 
-# **Iterated HARE-GLS**:
-haei = iterated_haegls(X, y_hae)
-println("Iterated HARE-GLS   β̂ = ", round.(coef(haei), digits=3))
-println("                   ρ̂ = ", round(haei.rho, digits=4),
+# **Iterated Sequential**:
+haei = iterated_sequential(X, y_hae)
+println("Iterated Sequential  β̂ = ", round.(coef(haei), digits=3))
+println("                    ρ̂ = ", round(haei.rho, digits=4),
         "  iterations = ", haei.iterations,
         "  converged = ", haei.converged)
 
@@ -130,8 +130,8 @@ println("                log ℓ = ", round(bm.loglik, digits=2),
 # | `two_step_prais_winsten` | AR(1)                 | `PraisWinstenResult`    |
 # | `iterated_prais_winsten` | AR(1)                 | `PraisWinstenResult`    |
 # | `hildreth_lu`            | AR(1)                 | `HildrethLuResult`      |
-# | `two_step_haegls`        | AR(1) + Het.          | `HAREGLSResult`          |
-# | `iterated_haegls`        | AR(1) + Het.          | `HAREGLSResult`          |
+# | `two_step_sequential`    | AR(1) + Het.          | `SequentialResult`      |
+# | `iterated_sequential`    | AR(1) + Het.          | `SequentialResult`      |
 # | `beach_mackinnon`        | AR(1) exact MLE       | `BeachMacKinnonResult`  |
 #
 # All result structs implement the StatsBase interface:

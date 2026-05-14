@@ -5,9 +5,11 @@
 ```@docs
 HAREModel
 HarveyResult
+GlejserResult
 PraisWinstenResult
 HildrethLuResult
-HAREGLSResult
+SequentialResult
+JointResult
 BeachMacKinnonResult
 ```
 
@@ -26,11 +28,18 @@ iterated_prais_winsten
 hildreth_lu
 ```
 
+## Sequential AR(1) + Heteroskedasticity Estimators
+
+```@docs
+two_step_sequential
+iterated_sequential
+```
+
 ## Joint AR(1) + Heteroskedasticity Estimators
 
 ```@docs
-two_step_haegls
-iterated_haegls
+two_step_joint
+iterated_joint
 ```
 
 ## Exact MLE
