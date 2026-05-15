@@ -1,11 +1,11 @@
 """
-HARE — Heteroskedasticity and Autocorrelation Estimators
+HARE - Heteroskedasticity and Autocorrelation Estimators
 
 Classical feasible GLS correction methods for linear regression models,
 including multiplicative heteroskedasticity (Harvey 1976), AR(1) serial
-correlation (Prais–Winsten, Hildreth–Lu, Cochrane–Orcutt), and joint
-correction via the Sequential HARE estimator (Oberhofer–Kmenta 1974) and
-the Beach–MacKinnon (1978) exact MLE.
+correlation (Prais-Winsten, Hildreth-Lu, Cochrane-Orcutt), and joint
+correction via the Sequential HARE estimator (Oberhofer-Kmenta 1974) and
+the Beach-MacKinnon (1978) exact MLE.
 """
 module HARE
 
@@ -16,6 +16,7 @@ using StatsModels
 using Tables
 using GLM
 using Optim
+using ForwardDiff
 using Distributions
 import StatsBase
 

@@ -1,6 +1,7 @@
 using Documenter
 using Literate
 using HARE
+using StatsModels
 
 # Convert examples/demo.jl → docs/src/tutorial.md, executing the code so
 # that output is captured and rendered.  This is also what runs the demo as

@@ -1,5 +1,9 @@
 # API Reference
 
+```@docs
+HARE
+```
+
 ## Result Types
 
 ```@docs
@@ -11,6 +15,8 @@ HildrethLuResult
 SequentialResult
 JointResult
 BeachMacKinnonResult
+WaldTestResult
+LRTestResult
 ```
 
 ## Heteroskedasticity Estimators
@@ -18,6 +24,8 @@ BeachMacKinnonResult
 ```@docs
 two_step_harvey
 iterated_harvey
+two_step_glejser
+iterated_glejser
 ```
 
 ## AR(1) Estimators
@@ -46,4 +54,11 @@ iterated_joint
 
 ```@docs
 beach_mackinnon
+```
+
+## Hypothesis Tests
+
+```@docs
+wald_test
+StatsModels.lrtest
 ```

@@ -14,15 +14,16 @@ Result of a Feasible WLS estimator ([`two_step_harvey`](@ref) or
 [`iterated_harvey`](@ref)).
 
 # Fields
-- `coef`      : coefficient vector β̂.
+- `coef`      : coefficient vector beta_hat.
 - `coefnames` : coefficient names.
 - `mf`        : `ModelFrame` from formula fit; `nothing` for matrix fit.
-- `vcov`      : estimated covariance matrix of β̂.
-- `residuals` : OLS-style residuals in the original space, y − Xβ̂.
-- `fitted`    : fitted values Xβ̂.
-- `gamma`     : estimated log-variance coefficients γ̂ (from `log ûᵢ² = Xᵢ γ`).
-- `iterations`: number of FWLS iterations performed.
-- `converged` : `true` if the convergence criterion was satisfied.
+- `vcov`      : estimated covariance matrix of beta_hat.
+- `residuals` : OLS-style residuals in the original space, y - X*beta_hat.
+- `fitted`    : fitted values X*beta_hat.
+- `gamma`      : estimated log-variance coefficients gamma_hat (from `log(u_hat_i^2) = X_i * gamma`).
+- `gamma_vcov` : estimated covariance matrix of gamma_hat (from the auxiliary OLS regression).
+- `iterations` : number of FWLS iterations performed.
+- `converged`  : `true` if the convergence criterion was satisfied.
 """
 struct HarveyResult <: HAREModel
     coef::Vector{Float64}
@@ -32,6 +33,7 @@ struct HarveyResult <: HAREModel
     residuals::Vector{Float64}
     fitted::Vector{Float64}
     gamma::Vector{Float64}
+    gamma_vcov::Matrix{Float64}
     iterations::Int
     converged::Bool
 end
@@ -39,19 +41,19 @@ end
 """
     PraisWinstenResult <: HAREModel
 
-Result of a Prais–Winsten estimator ([`two_step_prais_winsten`](@ref) or
+Result of a Prais-Winsten estimator ([`two_step_prais_winsten`](@ref) or
 [`iterated_prais_winsten`](@ref)).
 
 # Fields
-- `coef`      : coefficient vector β̂.
+- `coef`      : coefficient vector beta_hat.
 - `coefnames` : coefficient names.
 - `mf`        : `ModelFrame` from formula fit; `nothing` for matrix fit.
-- `vcov`      : estimated covariance matrix of β̂.
-- `residuals` : residuals in the original space, y − Xβ̂.
-- `fitted`    : fitted values Xβ̂.
-- `rho`       : estimated AR(1) coefficient ρ̂.
-- `iterations`: number of Cochrane–Orcutt iterations performed.
-- `converged` : `true` if |Δρ| < tolerance.
+- `vcov`      : estimated covariance matrix of beta_hat.
+- `residuals` : residuals in the original space, y - X*beta_hat.
+- `fitted`    : fitted values X*beta_hat.
+- `rho`       : estimated AR(1) coefficient rho_hat.
+- `iterations`: number of Cochrane-Orcutt iterations performed.
+- `converged` : `true` if |rho(i) - rho(i-1)| < tolerance.
 """
 struct PraisWinstenResult <: HAREModel
     coef::Vector{Float64}
@@ -68,16 +70,16 @@ end
 """
     HildrethLuResult <: HAREModel
 
-Result of the Hildreth–Lu grid-search estimator ([`hildreth_lu`](@ref)).
+Result of the Hildreth-Lu grid-search estimator ([`hildreth_lu`](@ref)).
 
 # Fields
-- `coef`      : coefficient vector β̂ at the optimal ρ.
+- `coef`      : coefficient vector beta_hat at the optimal rho.
 - `coefnames` : coefficient names.
 - `mf`        : `ModelFrame` from formula fit; `nothing` for matrix fit.
-- `vcov`      : estimated covariance matrix of β̂.
-- `residuals` : residuals in the original space, y − Xβ̂.
-- `fitted`    : fitted values Xβ̂.
-- `rho`       : grid value of ρ̂ that minimised RSS.
+- `vcov`      : estimated covariance matrix of beta_hat.
+- `residuals` : residuals in the original space, y - X*beta_hat.
+- `fitted`    : fitted values X*beta_hat.
+- `rho`       : grid value of rho_hat that minimised RSS.
 - `rss`       : minimised residual sum of squares.
 - `iterations`: number of grid points evaluated.
 - `converged` : always `true` (grid search always completes).
@@ -100,19 +102,20 @@ end
 
 Result of the Sequential HARE estimator ([`two_step_sequential`](@ref) or
 [`iterated_sequential`](@ref)). Corrects for AR(1) autocorrelation first
-(Prais–Winsten), then multiplicative heteroskedasticity (Harvey), sequentially.
+(Prais-Winsten), then multiplicative heteroskedasticity (Harvey), sequentially.
 
 # Fields
-- `coef`      : coefficient vector β̂.
+- `coef`      : coefficient vector beta_hat.
 - `coefnames` : coefficient names.
 - `mf`        : `ModelFrame` from formula fit; `nothing` for matrix fit.
-- `vcov`      : estimated covariance matrix of β̂.
-- `residuals` : residuals in the original space, y − Xβ̂.
-- `fitted`    : fitted values Xβ̂.
-- `rho`       : estimated AR(1) coefficient ρ̂.
-- `gamma`     : estimated log-variance coefficients γ̂ (from the Harvey step).
-- `iterations`: number of sequential iterations performed.
-- `converged` : `true` if the joint convergence criterion was satisfied.
+- `vcov`      : estimated covariance matrix of beta_hat.
+- `residuals` : residuals in the original space, y - X*beta_hat.
+- `fitted`    : fitted values X*beta_hat.
+- `rho`       : estimated AR(1) coefficient rho_hat.
+- `gamma`      : estimated log-variance coefficients gamma_hat (from the Harvey step).
+- `gamma_vcov` : estimated covariance matrix of gamma_hat (from the auxiliary OLS regression).
+- `iterations` : number of sequential iterations performed.
+- `converged`  : `true` if the joint convergence criterion was satisfied.
 """
 struct SequentialResult <: HAREModel
     coef::Vector{Float64}
@@ -123,6 +126,7 @@ struct SequentialResult <: HAREModel
     fitted::Vector{Float64}
     rho::Float64
     gamma::Vector{Float64}
+    gamma_vcov::Matrix{Float64}
     iterations::Int
     converged::Bool
 end
@@ -134,15 +138,16 @@ Result of a Glejser FWLS estimator ([`two_step_glejser`](@ref) or
 [`iterated_glejser`](@ref)).
 
 # Fields
-- `coef`      : coefficient vector β̂.
+- `coef`      : coefficient vector beta_hat.
 - `coefnames` : coefficient names.
 - `mf`        : `ModelFrame` from formula fit; `nothing` for matrix fit.
-- `vcov`      : estimated covariance matrix of β̂.
-- `residuals` : residuals in the original space, y − Xβ̂.
-- `fitted`    : fitted values Xβ̂.
-- `gamma`     : estimated standard-deviation coefficients γ̂ (from `|ûᵢ| = Zᵢ γ`).
-- `iterations`: number of FWLS iterations performed.
-- `converged` : `true` if the convergence criterion was satisfied.
+- `vcov`      : estimated covariance matrix of beta_hat.
+- `residuals` : residuals in the original space, y - X*beta_hat.
+- `fitted`    : fitted values X*beta_hat.
+- `gamma`      : estimated std-dev coefficients gamma_hat (from `|u_hat_i| = Z_i * gamma`).
+- `gamma_vcov` : estimated covariance matrix of gamma_hat (from the auxiliary OLS regression).
+- `iterations` : number of FWLS iterations performed.
+- `converged`  : `true` if the convergence criterion was satisfied.
 """
 struct GlejserResult <: HAREModel
     coef::Vector{Float64}
@@ -152,6 +157,7 @@ struct GlejserResult <: HAREModel
     residuals::Vector{Float64}
     fitted::Vector{Float64}
     gamma::Vector{Float64}
+    gamma_vcov::Matrix{Float64}
     iterations::Int
     converged::Bool
 end
@@ -164,17 +170,18 @@ Result of the Joint HARE estimator ([`two_step_joint`](@ref) or
 heteroskedasticity simultaneously via maximum likelihood.
 
 # Fields
-- `coef`      : coefficient vector β̂.
+- `coef`      : coefficient vector beta_hat.
 - `coefnames` : coefficient names.
 - `mf`        : `ModelFrame` from formula fit; `nothing` for matrix fit.
-- `vcov`      : estimated covariance matrix of β̂ (conditional on ρ̂, γ̂).
-- `residuals` : residuals in the original space, y − Xβ̂.
-- `fitted`    : fitted values Xβ̂.
-- `rho`       : estimated AR(1) coefficient ρ̂.
-- `gamma`     : estimated log-variance coefficients γ̂ (for `log σ²_t = z_t'γ`).
-- `loglik`    : log-likelihood at the final estimates.
-- `iterations`: number of iterations performed.
-- `converged` : `true` if the convergence criterion was satisfied.
+- `vcov`      : estimated covariance matrix of beta_hat (conditional on rho_hat, gamma_hat).
+- `residuals` : residuals in the original space, y - X*beta_hat.
+- `fitted`    : fitted values X*beta_hat.
+- `rho`       : estimated AR(1) coefficient rho_hat.
+- `gamma`      : estimated log-variance coefficients gamma_hat (for `log(sigma_t^2) = z_t' * gamma`).
+- `gamma_vcov` : estimated covariance matrix of gamma_hat (from the observed information matrix).
+- `loglik`     : log-likelihood at the final estimates.
+- `iterations` : number of iterations performed.
+- `converged`  : `true` if the convergence criterion was satisfied.
 """
 struct JointResult <: HAREModel
     coef::Vector{Float64}
@@ -185,6 +192,7 @@ struct JointResult <: HAREModel
     fitted::Vector{Float64}
     rho::Float64
     gamma::Vector{Float64}
+    gamma_vcov::Matrix{Float64}
     loglik::Float64
     iterations::Int
     converged::Bool
@@ -193,16 +201,16 @@ end
 """
     BeachMacKinnonResult <: HAREModel
 
-Result of the Beach–MacKinnon exact MLE ([`beach_mackinnon`](@ref)).
+Result of the Beach-MacKinnon exact MLE ([`beach_mackinnon`](@ref)).
 
 # Fields
-- `coef`      : coefficient vector β̂.
+- `coef`      : coefficient vector beta_hat.
 - `coefnames` : coefficient names.
 - `mf`        : `ModelFrame` from formula fit; `nothing` for matrix fit.
-- `vcov`      : estimated covariance matrix of β̂ (conditional on ρ̂).
-- `residuals` : residuals in the original space, y − Xβ̂.
-- `fitted`    : fitted values Xβ̂.
-- `rho`       : MLE of the AR(1) coefficient ρ̂.
+- `vcov`      : estimated covariance matrix of beta_hat (conditional on rho_hat).
+- `residuals` : residuals in the original space, y - X*beta_hat.
+- `fitted`    : fitted values X*beta_hat.
+- `rho`       : MLE of the AR(1) coefficient rho_hat.
 - `loglik`    : maximised concentrated log-likelihood value.
 - `converged` : `true` if Brent's method converged.
 """

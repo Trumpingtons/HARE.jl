@@ -1,6 +1,6 @@
 # HARE.jl
 
-**Heteroskedasticity and Autocorrelation Estimators** — feasible GLS
+**Heteroskedasticity and Autocorrelation Estimators** -- feasible GLS
 corrections for linear regression models.
 
 HARE.jl provides eight classical estimators covering three error structures:
@@ -25,13 +25,16 @@ Pkg.add(url = "https://github.com/Trumpingtons/HARE.jl")
 
 ## Quick Start
 
+Pass regressors **without** a constant column -- the intercept is added automatically:
+
 ```julia
 using HARE, Random
 
 Random.seed!(1234)
-n  = 500
-X  = hcat(ones(n), randn(n), randn(n))
-y  = X * [1.0, 2.0, -1.0] .+ exp.(0.5 .* X[:,2]) .* randn(n)
+n   = 500
+x1  = randn(n); x2 = randn(n)
+X = hcat(x1, x2)
+y   = hcat(ones(n), X) * [1.0, 2.0, -1.0] .+ exp.(0.5 .* x1) .* randn(n)
 
 m = iterated_harvey(X, y)
 coef(m)      # coefficient vector
@@ -44,7 +47,7 @@ The `@formula` interface mirrors GLM.jl:
 
 ```julia
 using HARE
-data = (y = y, x1 = X[:,2], x2 = X[:,3])
+data = (y = y, x1 = x1, x2 = x2)
 m = iterated_harvey(@formula(y ~ x1 + x2), data)
 ```
 

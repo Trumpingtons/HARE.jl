@@ -1,5 +1,5 @@
 """
-Result of a Wald test for linear restrictions Rβ = r.
+Result of a Wald test for linear restrictions R*beta = r.
 
 Fields: `stat` (F statistic), `df` (numerator), `df_residual` (denominator), `pvalue`.
 """
@@ -16,7 +16,7 @@ function Base.show(io::IO, w::WaldTestResult)
 end
 
 """
-Result of a likelihood ratio test comparing two nested Beach–MacKinnon models.
+Result of a likelihood ratio test comparing two nested Beach-MacKinnon models.
 
 Fields: `stat` (LR statistic), `df`, `pvalue`.
 """
@@ -34,10 +34,11 @@ end
 """
     wald_test(m, R, r = zeros(size(R, 1))) -> WaldTestResult
 
-Wald test for the linear restriction H₀: Rβ = r.
+Wald test for the linear restriction H0: R*beta = r.
 
-`R` is a q × k restriction matrix; `r` is a q-vector (default: zero vector).
-The test statistic F = (Rβ̂ − r)'(RVR')⁻¹(Rβ̂ − r) / q is compared to F(q, n−k).
+`R` is a q x k restriction matrix; `r` is a q-vector (default: zero vector).
+The test statistic F = (R*beta_hat - r)' * (R*V*R')^(-1) * (R*beta_hat - r) / q
+is compared to F(q, n-k).
 """
 function wald_test(m::HAREModel, R::AbstractMatrix,
                    r::AbstractVector = zeros(size(R, 1)))
@@ -56,10 +57,10 @@ end
 """
     lrtest(m_r, m_u) -> LRTestResult
 
-Likelihood ratio test comparing two nested Beach–MacKinnon models.
+Likelihood ratio test comparing two nested Beach-MacKinnon models.
 
 `m_r` is the restricted (fewer parameters) model; `m_u` is the unrestricted model.
-LR = 2(ℓᵤ − ℓᵣ) ~ χ²(q) where q = dof(m_u) − dof(m_r).
+LR = 2*(L_u - L_r) ~ chi^2(q) where q = dof(m_u) - dof(m_r).
 """
 function StatsModels.lrtest(m_r::BeachMacKinnonResult, m_u::BeachMacKinnonResult)
     df = dof(m_u) - dof(m_r)
