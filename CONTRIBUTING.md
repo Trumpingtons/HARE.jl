@@ -80,6 +80,26 @@ generating `docs/src/tutorial.md`, then builds the full site into
 > **Note:** The warning `Skipping deployment` is expected when building
 > locally — Documenter only deploys from CI.
 
+### Catching missing dependencies before pushing
+
+Local builds can silently succeed even with an incomplete `docs/Project.toml`
+because Julia makes HARE's own transitive dependencies available in the docs
+environment.  CI is stricter and will fail if a package used directly in
+`docs/make.jl` or `examples/demo.jl` is not listed explicitly.
+
+To mirror CI exactly before pushing, run the full clean setup in one go:
+
+```bash
+julia --project=docs -e '
+  import Pkg
+  Pkg.develop(Pkg.PackageSpec(path="."))
+  Pkg.instantiate()' && julia --project=docs docs/make.jl
+```
+
+**Rule of thumb:** any package that appears in a `using` statement in
+`docs/make.jl` or `examples/demo.jl` must be listed in `docs/Project.toml`,
+even if it is already a dependency of HARE itself.
+
 ### On GitHub
 
 Docs are built and deployed automatically on every push to `main` via
