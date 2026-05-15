@@ -104,8 +104,14 @@ Docs are built and deployed automatically on every push to `main` via
    ```bash
    julia --project=docs docs/make.jl
    ```
-5. **Push to `main`** — CI runs tests on all platforms and deploys the
-   docs automatically.
+5. **Commit and push to `main`** — CI runs tests on all platforms and
+   deploys the docs automatically:
+   ```bash
+   git add src/ test/ examples/ docs/ Project.toml   # stage changed files
+   git commit -m "Short description of what changed"
+   git push origin main
+   ```
+   Watch progress at `https://github.com/Trumpingtons/HARE.jl/actions`.
 
 ### Checking the demo independently
 
