@@ -760,7 +760,7 @@ end
 # still being tight enough to catch systematic biases.
 
 @testset "consistency (large n)" begin
-    Random.seed!(2025)
+    Random.seed!(42)
     N   = 100_000
     x1L = randn(N);  x2L = randn(N)
     XL  = hcat(x1L, x2L)

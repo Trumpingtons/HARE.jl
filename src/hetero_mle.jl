@@ -27,7 +27,7 @@ function _hetero_negloglik(theta, X_full, Z_full, y, link)
         return sum(log.(sigma_c)) + 0.5 * sum(resid.^2 ./ sigma_c.^2)
     else  # :linear
         sigma2   = Z_full * gamma
-        sigma2_c = max.(sigma2, 1e-10)
+        sigma2_c = log1p.(exp.(sigma2))  # softplus: smooth, always positive
         return 0.5 * (sum(log.(sigma2_c)) + sum(resid.^2 ./ sigma2_c))
     end
 end

@@ -203,10 +203,42 @@ non-concave; the warm start (see below) is important for reliable convergence.
 ### Numerical stability
 
 The quadratic and linear link functions require $\sigma_i > 0$ and
-$\sigma_i^2 > 0$ respectively.  The implementation clamps predicted values to
-$10^{-10}$ before evaluating the log and division, preventing `NaN` or `Inf`
-during the L-BFGS line search while leaving the gradient well-defined almost
-everywhere.
+$\sigma_i^2 > 0$ respectively.  The two links are handled differently.
+
+**Exponential link.**  $\sigma_i^2 = \exp(\mathbf{z}_i^\top\boldsymbol{\gamma})$ is strictly
+positive for any $\boldsymbol{\gamma}$, so no clamping or smoothing is needed.  The
+Harvey FWLS warm start also carries slope information (the auxiliary log-linear
+regression directly estimates each element of $\boldsymbol{\gamma}$), so L-BFGS starts
+in a well-identified region and never explores infeasible directions.
+
+**Quadratic link.**  $\hat{\sigma}_i = \max(\mathbf{z}_i^\top\hat{\boldsymbol{\gamma}},\, 10^{-10})$.
+A hard clamp suffices here because the Glejser FWLS warm start estimates $\boldsymbol{\gamma}$
+from $|\hat{u}|$, which is non-negative, so the warm start already carries slope
+information with $\hat{\sigma}_i > 0$ everywhere.  L-BFGS starts in the feasible
+region and rarely crosses zero during the line search; the clamp is almost never
+triggered, so its non-smoothness has no practical effect.  Using softplus instead
+would be unnecessary: it requires two transcendental evaluations per observation
+versus a single comparison, and ForwardDiff propagates derivatives through both,
+adding cost with no benefit.
+
+**Linear link.**  Rather than a hard clamp, the implementation uses the
+**softplus** function:
+
+$$\tilde{\sigma}_i^2 = \log\!\left(1 + e^{\,\mathbf{z}_i^\top\boldsymbol{\gamma}}\right)$$
+
+Softplus is smooth and strictly positive everywhere, so ForwardDiff computes exact,
+continuous gradients throughout the L-BFGS line search.  The linear link is the
+problematic case: its warm start is deliberately flat ($\gamma_0 = \bar{u}^2$, all
+slopes $= 0$) to guarantee a feasible starting point, but this gives L-BFGS no
+directional information about the slopes.  The optimizer immediately explores slope
+directions that push some $\sigma_i^2$ negative, hitting the clamp on the very
+first line search.  A hard clamp creates a kink at zero: the gradient reported by
+ForwardDiff is accurate within each piece but the non-smoothness causes L-BFGS to
+make poor curvature estimates when the iterate crosses the boundary, which can
+prevent convergence — particularly on Windows x86 and macOS ARM where
+floating-point evaluation order differs.  For $\sigma_i^2$ well above zero,
+$\log(1 + e^x) \approx x$, so the effective model is indistinguishable from the
+true linear variance function in the well-specified region.
 
 ### Optimisation
 
