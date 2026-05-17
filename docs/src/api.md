@@ -79,8 +79,8 @@ beach_mackinnon
 ## Heteroskedasticity Tests
 
 ```@docs
-HarveyTest
-GlejserTest
+harvey_test
+glejser_test
 ```
 
 ## Model Comparison Tests

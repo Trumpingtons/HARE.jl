@@ -590,7 +590,7 @@ regression with autocorrelated errors. *Econometrica*, 46(1), 51–58.
 
 ## 11. Heteroskedasticity LM tests
 
-### Harvey test (`HarveyTest`)
+### Harvey test (`harvey_test`)
 
 Tests $H_0\colon \boldsymbol{\gamma} = \mathbf{0}$ in the exponential variance model
 $\log\sigma_i^2 = \gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma}$.
@@ -603,7 +603,7 @@ $\mathrm{LM} = n R^2 \sim \chi^2(p)$ under $H_0$, where $p = \dim(\boldsymbol{\g
 **Equivalence to SAS.** SAS `PROC AUTOREG HETERO TEST=LM` computes the same
 statistic.
 
-### Glejser test (`GlejserTest`)
+### Glejser test (`glejser_test`)
 
 Tests $H_0\colon \boldsymbol{\gamma} = \mathbf{0}$ in the quadratic variance model
 $\sigma_i = \gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma}$.
@@ -613,11 +613,36 @@ on $\mathbf{Z}$ → $\mathrm{LM} = n R^2 \sim \chi^2(p)$ under $H_0$.  The
 $\sqrt{\pi/2}$ correction used in estimation is scale-invariant and cancels in
 $R^2$; it does not affect the test statistic.
 
-### Linear variance link test
+### Borrowed tests: Breusch-Pagan, White, Durbin-Watson, Breusch-Godfrey
 
-The Breusch-Pagan test (linear link, $\sigma_i^2$ linear in $\mathbf{z}_i$) is
-available as `HypothesisTests.BreuschPaganTest(X, e)` — not implemented in HARE
-since it is already covered by the Julia ecosystem.
+Four additional diagnostic tests are provided as thin wrappers around
+`HypothesisTests.jl`, which supplies the underlying computations:
+
+| HARE function | Wraps | Null hypothesis |
+|---|---|---|
+| `breusch_pagan_test` | `WhiteTest(type=:linear)` | $\sigma_i^2$ constant (linear link) |
+| `white_test` | `WhiteTest(type=:White)` | $\sigma_i^2$ constant (general) |
+| `durbin_watson_test` | `DurbinWatsonTest` | no first-order serial correlation |
+| `breusch_godfrey_test` | `BreuschGodfreyTest` | no serial correlation up to order $p$ |
+
+Each wrapper runs OLS internally and accepts the same `(X, y; intercept=true)`
+and `(formula, data)` calling conventions as `harvey_test` and `glejser_test`,
+so users do not need to manage residuals manually.
+
+**Why snake\_case names instead of the `HypothesisTests` CamelCase names?**
+
+`HypothesisTests.jl` already exports `BreuschPaganTest`, `WhiteTest`,
+`DurbinWatsonTest`, and `BreuschGodfreyTest` as `(X, e)` constructors, where
+`X` is the full design matrix (with intercept) and `e` is a pre-computed
+residual vector.  HARE's convention is `(X, y)`, where `X` excludes the
+intercept and `y` is the raw response — the OLS step is handled internally.
+Both signatures are `(AbstractMatrix, AbstractVector)` positionally, so Julia
+cannot distinguish them by dispatch: defining HARE methods under the same
+CamelCase names would silently override the `HypothesisTests` constructors for
+those types, breaking any code that calls the original API directly (type
+piracy).  Snake\_case names (`breusch_pagan_test`, etc.) are a different
+namespace that coexists cleanly with `HypothesisTests`, and the distinction
+also makes the source of each name unambiguous to readers of the code.
 
 ### Notes on $\gamma_0$ (intercept)
 

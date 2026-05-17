@@ -32,7 +32,7 @@ Model: $\sigma_i^2 = \exp(\gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma})$
 | Two-step FWLS | ✓ `two_step_harvey` | — | — | ✓ `hetregress, twostep` | — |
 | Iterated FWLS | ✓ `iterated_harvey` | — | — | — | — |
 | MLE | ✓ `exponential_mle` | — | — | ✓ `hetregress` | ✓ `HETERO LINK=EXP` |
-| Harvey test | ✓ `HarveyTest` | ✓ `skedastic` | — | — | ✓ `HETERO TEST=LM` |
+| Harvey test | ✓ `harvey_test` | ✓ `skedastic` | — | — | ✓ `HETERO TEST=LM` |
 
 **R:** `skedastic` (CRAN, active) implements Harvey (1976) as a *test* only — it
 computes the test statistic and p-value but produces no corrected beta or
@@ -78,7 +78,7 @@ Model: $\sigma_i = \gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma}$ (equivalentl
 | Two-step FWLS | ✓ `two_step_glejser` | — | — | — | — |
 | Iterated FWLS | ✓ `iterated_glejser` | — | — | — | — |
 | MLE | ✓ `quadratic_mle` | — | — | — | ✓ `HETERO LINK=SQUARE` |
-| Glejser test | ✓ `GlejserTest` | ✓ `skedastic` | — | — | — |
+| Glejser test | ✓ `glejser_test` | ✓ `skedastic` | — | — | — |
 
 No open-source platform implements Glejser's auxiliary regression as a
 correction estimator.  `skedastic` (R) provides the test statistic only under
@@ -298,10 +298,10 @@ prohibits combining the `HETERO` statement (heteroscedasticity) with the
 |---|---|---|---|
 | Exponential variance link FWLS two-step and iterated | §9.7.1 | two-step only | — |
 | Exponential variance link MLE | §9.7.1 | ✓ `hetregress` | ✓ `LINK=EXP` |
-| Exponential variance link LM test (`HarveyTest`) | §9.7.1 | — | ✓ `TEST=LM` |
+| Exponential variance link LM test (`harvey_test`) | §9.7.1 | — | ✓ `TEST=LM` |
 | Quadratic variance link FWLS two-step and iterated | §9.5.3 | — | — |
 | Quadratic variance link MLE | §9.5.3 | — | ✓ `LINK=SQUARE` |
-| Quadratic variance link LM test (`GlejserTest`) | §9.5.3 | — | — |
+| Quadratic variance link LM test (`glejser_test`) | §9.5.3 | — | — |
 | Linear variance link MLE | — | — | ✓ `LINK=LINEAR` |
 | Prais-Winsten (retains first observation) | §20.9.1 | ✓ | ✓ |
 | Cochrane-Orcutt (drops first observation) | §20.9.1 | ✓ | ✓ (fallback) |

@@ -1,6 +1,7 @@
 using Test
 using HARE
 using Random
+using StableRNGs
 using LinearAlgebra
 using StatsBase
 using StatsModels
@@ -627,51 +628,51 @@ end
     end
 end
 
-@testset "HarveyTest" begin
+@testset "harvey_test" begin
     # Under heteroskedastic DGP: should reject H₀
-    t = HarveyTest(X, y_het)
-    @test t isa HarveyTest
+    t = harvey_test(X, y_het)
+    @test t isa HarveyTestResult
     @test t.dof == 2          # two slope regressors (x1, x2)
     @test t.lm  > 0.0
     @test pvalue(t) < 0.05    # should detect the heteroskedasticity
 
     # Under homoskedastic DGP (y_ar): should not reject H₀
-    t_hom = HarveyTest(X, y_ar)
+    t_hom = harvey_test(X, y_ar)
     @test pvalue(t_hom) > 0.01
 
     # Formula dispatch
-    t_f = HarveyTest(@formula(y ~ x1 + x2), data_het)
+    t_f = harvey_test(@formula(y ~ x1 + x2), data_het)
     @test t_f.lm  ≈ t.lm  atol=1e-8
     @test t_f.dof == t.dof
 
     # Z ≠ X: one-variable auxiliary regression
-    t_z = HarveyTest(X, y_het; Z = reshape(x1, n, 1))
+    t_z = harvey_test(X, y_het; Z = reshape(x1, n, 1))
     @test t_z.dof == 1
 
     # show does not error
     buf = IOBuffer(); show(buf, t); @test length(take!(buf)) > 0
 end
 
-@testset "GlejserTest" begin
+@testset "glejser_test" begin
     # y_het has exponential heteroskedasticity in x1 — the Glejser test detects
     # any heteroskedasticity correlated with the regressors, not only its own link
-    t = GlejserTest(X, y_het)
-    @test t isa GlejserTest
+    t = glejser_test(X, y_het)
+    @test t isa GlejserTestResult
     @test t.dof == 2
     @test t.lm  > 0.0
     @test pvalue(t) < 0.05
 
     # Under homoskedastic DGP (y_ar): should not reject H₀
-    t_hom = GlejserTest(X, y_ar)
+    t_hom = glejser_test(X, y_ar)
     @test pvalue(t_hom) > 0.01
 
     # Formula dispatch
-    t_f = GlejserTest(@formula(y ~ x1 + x2), data_het)
+    t_f = glejser_test(@formula(y ~ x1 + x2), data_het)
     @test t_f.lm  ≈ t.lm  atol=1e-8
     @test t_f.dof == t.dof
 
     # Z ≠ X: one-variable auxiliary regression
-    t_z = GlejserTest(X, y_glej; Z = reshape(x1, n, 1))
+    t_z = glejser_test(X, y_glej; Z = reshape(x1, n, 1))
     @test t_z.dof == 1
 
     # show does not error
@@ -755,22 +756,22 @@ end
 # The tests below verify *statistical* correctness: with a large sample every
 # estimator must recover its true population parameters to within sampling noise.
 # A failure here indicates a genuine bias or implementation error — not a wrong
-# array dimension.  atol values are roughly 7× the O(1/√N) standard error at
-# N = 5_000, so they are robust to platform-level floating-point variation while
-# still being tight enough to catch systematic biases.
+# array dimension.  StableRNG is used instead of the default Julia RNG to
+# guarantee identical random streams across Julia versions (1.10, 1.12, …),
+# making atol values platform- and version-independent.
 
 @testset "consistency (large n)" begin
-    Random.seed!(42)
+    rng = StableRNG(123)
     N   = 100_000
-    x1L = randn(N);  x2L = randn(N)
+    x1L = randn(rng, N);  x2L = randn(rng, N)
     XL  = hcat(x1L, x2L)
     XfL = hcat(ones(N), XL)
-    epsL = randn(N)
+    epsL = randn(rng, N)
 
     # Harvey: log(σ²) = 0·1 + 1·x1 + 0·x2
     gamma_h = [0.0, 1.0, 0.0]
     sigL_h  = exp.(0.5 .* (XfL * gamma_h))
-    yL_h    = XfL * b_true .+ sigL_h .* randn(N)
+    yL_h    = XfL * b_true .+ sigL_h .* randn(rng, N)
     mh = two_step_harvey(XL, yL_h)
     @test coef(mh)  ≈ b_true  atol=0.02
     @test mh.gamma  ≈ gamma_h atol=0.02
@@ -778,7 +779,7 @@ end
     # Glejser: σ = 0.5 + 0.3·|x1|  (correctly specified Z supplied)
     gamma_g = [0.5, 0.3]
     sigL_g  = 0.5 .+ 0.3 .* abs.(x1L)
-    yL_g    = XfL * b_true .+ sigL_g .* randn(N)
+    yL_g    = XfL * b_true .+ sigL_g .* randn(rng, N)
     ZL_g    = hcat(ones(N), abs.(x1L))
     mg = two_step_glejser(XL, yL_g; Z = ZL_g)
     @test coef(mg)  ≈ b_true  atol=0.02
@@ -825,7 +826,7 @@ end
     sigma2_true = [1.0, 2.0, 3.0, 4.0]
     groupsL = repeat([1, 2, 3, 4], inner = N ÷ 4)
     sigL_gw = [sqrt(sigma2_true[groupsL[i]]) for i in 1:N]
-    yL_gw   = XfL * b_true .+ sigL_gw .* randn(N)
+    yL_gw   = XfL * b_true .+ sigL_gw .* randn(rng, N)
 
     mgw2 = two_step_groupwise(XL, yL_gw, groupsL)
     @test coef(mgw2)  ≈ b_true      atol=0.02

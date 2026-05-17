@@ -18,6 +18,7 @@ using GLM
 using Optim
 using ForwardDiff
 using Distributions
+using HypothesisTests: BreuschPaganTest, WhiteTest, BreuschGodfreyTest, DurbinWatsonTest
 import StatsBase
 import StatsAPI
 using StatsAPI: pvalue, dof
@@ -26,7 +27,9 @@ export HAREModel
 export HarveyResult, GlejserResult, PraisWinstenResult, CochranOrcuttResult, HildrethLuResult, SequentialResult, JointResult, BeachMacKinnonResult, HeteroMLEResult, GroupwiseResult
 export tstat, pvalues, sigma2
 export wald_test, WaldTestResult, LRTestResult
-export HarveyTest, GlejserTest
+export HarveyTestResult, GlejserTestResult
+export harvey_test, glejser_test
+export breusch_pagan_test, white_test, durbin_watson_test, breusch_godfrey_test
 export pvalue, dof
 export two_step_harvey, iterated_harvey
 export two_step_glejser, iterated_glejser

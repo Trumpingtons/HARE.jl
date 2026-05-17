@@ -1,6 +1,6 @@
 """
-    HarveyTest(X, y; intercept=true, Z=nothing) -> HarveyTest
-    HarveyTest(formula, data; Z=nothing) -> HarveyTest
+    harvey_test(X, y; intercept=true, Z=nothing) -> HarveyTestResult
+    harvey_test(formula, data; Z=nothing) -> HarveyTestResult
 
 Lagrange multiplier test for multiplicative heteroskedasticity (Harvey 1976).
 
@@ -24,40 +24,40 @@ the intercept).
 Harvey, A. C. (1976). Estimating regression models with multiplicative
 heteroscedasticity. *Econometrica*, 44(3), 461–465.
 """
-struct HarveyTest
+struct HarveyTestResult
     n::Int
     lm::Float64
     dof::Int
 end
 
-function HarveyTest(X::AbstractMatrix, y::AbstractVector;
-                    intercept::Bool = true, Z = nothing)
+function harvey_test(X::AbstractMatrix, y::AbstractVector;
+                     intercept::Bool = true, Z = nothing)
     n      = length(y)
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
     Z_full = isnothing(Z) ? X_full : hcat(ones(n), Z)
     e      = residuals(lm(X_full, y))
     aux    = lm(Z_full, log.(e.^2) .- _HARVEY_C)
     stat   = n * max(r2(aux), 0.0)
-    return HarveyTest(n, stat, size(Z_full, 2) - 1)
+    return HarveyTestResult(n, stat, size(Z_full, 2) - 1)
 end
 
-function HarveyTest(formula::FormulaTerm, data; Z = nothing, kwargs...)
+function harvey_test(formula::FormulaTerm, data; Z = nothing, kwargs...)
     X, y, _, _ = _extract_Xy(formula, data)
-    return HarveyTest(X, y; intercept = false, Z = Z, kwargs...)
+    return harvey_test(X, y; intercept = false, Z = Z, kwargs...)
 end
 
-StatsAPI.dof(t::HarveyTest)    = t.dof
-StatsAPI.pvalue(t::HarveyTest) = ccdf(Chisq(t.dof), t.lm)
+StatsAPI.dof(t::HarveyTestResult)    = t.dof
+StatsAPI.pvalue(t::HarveyTestResult) = ccdf(Chisq(t.dof), t.lm)
 
-function Base.show(io::IO, t::HarveyTest)
+function Base.show(io::IO, t::HarveyTestResult)
     println(io, "Harvey test for multiplicative heteroskedasticity (exponential link)")
     println(io, "  H₀: γ = 0  in  log(σᵢ²) = γ₀ + zᵢ'γ")
     println(io, "  LM = $(round(t.lm, digits=4))   df = $(t.dof)   p-value = $(round(StatsAPI.pvalue(t), digits=4))")
 end
 
 """
-    GlejserTest(X, y; intercept=true, Z=nothing) -> GlejserTest
-    GlejserTest(formula, data; Z=nothing) -> GlejserTest
+    glejser_test(X, y; intercept=true, Z=nothing) -> GlejserTestResult
+    glejser_test(formula, data; Z=nothing) -> GlejserTestResult
 
 Lagrange multiplier test for heteroskedasticity with a linear standard deviation
 (Glejser 1969).
@@ -82,35 +82,176 @@ not affect the test statistic.
 Glejser, H. (1969). A new test for heteroskedasticity. *Journal of the American
 Statistical Association*, 64(325), 316–323.
 """
-struct GlejserTest
+struct GlejserTestResult
     n::Int
     lm::Float64
     dof::Int
 end
 
-function GlejserTest(X::AbstractMatrix, y::AbstractVector;
-                     intercept::Bool = true, Z = nothing)
+function glejser_test(X::AbstractMatrix, y::AbstractVector;
+                      intercept::Bool = true, Z = nothing)
     n      = length(y)
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
     Z_full = isnothing(Z) ? X_full : hcat(ones(n), Z)
     e      = residuals(lm(X_full, y))
     aux    = lm(Z_full, abs.(e))
     stat   = n * max(r2(aux), 0.0)
-    return GlejserTest(n, stat, size(Z_full, 2) - 1)
+    return GlejserTestResult(n, stat, size(Z_full, 2) - 1)
 end
 
-function GlejserTest(formula::FormulaTerm, data; Z = nothing, kwargs...)
+function glejser_test(formula::FormulaTerm, data; Z = nothing, kwargs...)
     X, y, _, _ = _extract_Xy(formula, data)
-    return GlejserTest(X, y; intercept = false, Z = Z, kwargs...)
+    return glejser_test(X, y; intercept = false, Z = Z, kwargs...)
 end
 
-StatsAPI.dof(t::GlejserTest)    = t.dof
-StatsAPI.pvalue(t::GlejserTest) = ccdf(Chisq(t.dof), t.lm)
+StatsAPI.dof(t::GlejserTestResult)    = t.dof
+StatsAPI.pvalue(t::GlejserTestResult) = ccdf(Chisq(t.dof), t.lm)
 
-function Base.show(io::IO, t::GlejserTest)
+function Base.show(io::IO, t::GlejserTestResult)
     println(io, "Glejser test for heteroskedasticity (quadratic link / linear SD)")
     println(io, "  H₀: γ = 0  in  σᵢ = γ₀ + zᵢ'γ")
     println(io, "  LM = $(round(t.lm, digits=4))   df = $(t.dof)   p-value = $(round(StatsAPI.pvalue(t), digits=4))")
+end
+
+# ---------------------------------------------------------------------------
+# Thin wrappers around HypothesisTests — HARE-convention constructors
+# (X without intercept, y as response) that run OLS internally.
+# ---------------------------------------------------------------------------
+
+"""
+    breusch_pagan_test(X, y; intercept=true) -> WhiteTest
+    breusch_pagan_test(formula, data) -> WhiteTest
+
+Breusch-Pagan / Koenker LM test for heteroskedasticity (linear variance link).
+
+Tests H₀: σᵢ² is constant against σᵢ² = f(Xβ). The LM statistic n·R²
+from the regression of ê² on X is distributed as χ²(k−1) under H₀,
+where k is the number of columns in X (including the intercept).
+
+Returns a `HypothesisTests.WhiteTest` with `type = :linear`; call `pvalue`
+on the result as usual.
+
+# References
+Breusch, T. S., & Pagan, A. R. (1979). A simple test for heteroscedasticity
+and random coefficient variation. *Econometrica*, 47(5), 1287–1294.
+
+Koenker, R. (1981). A note on studentizing a test for heteroscedasticity.
+*Journal of Econometrics*, 17(1), 107–112.
+"""
+function breusch_pagan_test(X::AbstractMatrix, y::AbstractVector;
+                             intercept::Bool = true)
+    n      = length(y)
+    X_full = intercept ? hcat(ones(eltype(X), n), X) : X
+    e      = residuals(lm(X_full, y))
+    return WhiteTest(float.(X_full), float.(e); type = :linear)
+end
+
+function breusch_pagan_test(formula::FormulaTerm, data; kwargs...)
+    X, y, _, _ = _extract_Xy(formula, data)
+    return breusch_pagan_test(X, y; intercept = false, kwargs...)
+end
+
+"""
+    white_test(X, y; intercept=true, type=:White) -> WhiteTest
+    white_test(formula, data; type=:White) -> WhiteTest
+
+White's general test for heteroskedasticity.
+
+The `type` keyword selects which auxiliary regressors are used:
+- `:White` (default) — linear terms, squares, and cross-products.
+- `:linear_and_squares` — linear terms and squares only (no cross-products).
+- `:linear` — linear terms only (equivalent to Breusch-Pagan/Koenker).
+
+The LM statistic n·R² from the regression of ê² on the selected terms
+is distributed as χ²(dof) under H₀ of homoskedasticity.
+
+Returns a `HypothesisTests.WhiteTest`; call `pvalue` on the result as usual.
+
+# References
+White, H. (1980). A heteroskedasticity-consistent covariance matrix estimator
+and a direct test for heteroskedasticity. *Econometrica*, 48(4), 817–838.
+"""
+function white_test(X::AbstractMatrix, y::AbstractVector;
+                    intercept::Bool = true, type::Symbol = :White)
+    n      = length(y)
+    X_full = intercept ? hcat(ones(eltype(X), n), X) : X
+    e      = residuals(lm(X_full, y))
+    return WhiteTest(float.(X_full), float.(e); type = type)
+end
+
+function white_test(formula::FormulaTerm, data; kwargs...)
+    X, y, _, _ = _extract_Xy(formula, data)
+    return white_test(X, y; intercept = false, kwargs...)
+end
+
+"""
+    durbin_watson_test(X, y; intercept=true) -> DurbinWatsonTest
+    durbin_watson_test(formula, data) -> DurbinWatsonTest
+
+Durbin-Watson test for first-order serial correlation in OLS residuals.
+
+The test statistic DW = Σ(eₜ − eₜ₋₁)² / Σeₜ² lies in [0, 4]; values
+near 2 indicate no autocorrelation, near 0 positive, near 4 negative.
+
+P-values use Pan's exact algorithm for n < 100 and a normal approximation
+otherwise. One-sided p-values can be obtained with
+`pvalue(t; tail = :right)` (positive autocorrelation) or
+`pvalue(t; tail = :left)` (negative autocorrelation).
+
+Returns a `HypothesisTests.DurbinWatsonTest`; call `pvalue` on the result
+as usual.
+
+Note: the test is invalid if X contains a lagged dependent variable.
+
+# References
+Durbin, J., & Watson, G. S. (1951). Testing for serial correlation in least
+squares regression, II. *Biometrika*, 38(1–2), 159–177.
+"""
+function durbin_watson_test(X::AbstractMatrix, y::AbstractVector;
+                             intercept::Bool = true)
+    n      = length(y)
+    X_full = intercept ? hcat(ones(eltype(X), n), X) : X
+    e      = residuals(lm(X_full, y))
+    return DurbinWatsonTest(float.(X_full), float.(e))
+end
+
+function durbin_watson_test(formula::FormulaTerm, data; kwargs...)
+    X, y, _, _ = _extract_Xy(formula, data)
+    return durbin_watson_test(X, y; intercept = false, kwargs...)
+end
+
+"""
+    breusch_godfrey_test(X, y, lag; intercept=true) -> BreuschGodfreyTest
+    breusch_godfrey_test(formula, data, lag) -> BreuschGodfreyTest
+
+Breusch-Godfrey LM test for serial correlation up to order `lag`.
+
+Unlike the Durbin-Watson test, this test remains valid when X contains
+lagged dependent variables. The LM statistic is distributed as χ²(lag)
+under H₀ of no serial correlation.
+
+Returns a `HypothesisTests.BreuschGodfreyTest`; call `pvalue` on the
+result as usual.
+
+# References
+Breusch, T. S. (1978). Testing for autocorrelation in dynamic linear models.
+*Australian Economic Papers*, 17(31), 334–355.
+
+Godfrey, L. G. (1978). Testing against general autoregressive and moving
+average error models when the regressors include lagged dependent variables.
+*Econometrica*, 46(6), 1293–1301.
+"""
+function breusch_godfrey_test(X::AbstractMatrix, y::AbstractVector, lag::Int;
+                               intercept::Bool = true)
+    n      = length(y)
+    X_full = intercept ? hcat(ones(eltype(X), n), X) : X
+    e      = residuals(lm(X_full, y))
+    return BreuschGodfreyTest(float.(X_full), float.(e), lag)
+end
+
+function breusch_godfrey_test(formula::FormulaTerm, data, lag::Int; kwargs...)
+    X, y, _, _ = _extract_Xy(formula, data)
+    return breusch_godfrey_test(X, y, lag; intercept = false, kwargs...)
 end
 
 # ---------------------------------------------------------------------------

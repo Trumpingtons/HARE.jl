@@ -8,8 +8,8 @@ AR(1) autocorrelation, and their combination:
 
 | Error structure | Estimators / Tests |
 |:----------------|:-----------|
-| Exponential variance (Harvey) | [`two_step_harvey`](@ref), [`exponential_mle`](@ref), [`HarveyTest`](@ref) |
-| Quadratic variance (Glejser) | [`two_step_glejser`](@ref), [`quadratic_mle`](@ref), [`GlejserTest`](@ref) |
+| Exponential variance (Harvey) | [`two_step_harvey`](@ref), [`exponential_mle`](@ref), [`harvey_test`](@ref) |
+| Quadratic variance (Glejser) | [`two_step_glejser`](@ref), [`quadratic_mle`](@ref), [`glejser_test`](@ref) |
 | Linear variance | [`linear_mle`](@ref) |
 | Groupwise heteroscedasticity | [`two_step_groupwise`](@ref), [`iterated_groupwise`](@ref) |
 | AR(1) autocorrelation | [`two_step_prais_winsten`](@ref), [`iterated_prais_winsten`](@ref), [`two_step_cochrane_orcutt`](@ref), [`iterated_cochrane_orcutt`](@ref), [`hildreth_lu`](@ref) |
