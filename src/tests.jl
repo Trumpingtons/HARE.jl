@@ -1,4 +1,13 @@
 """
+Result of [`harvey_test`](@ref). Fields: `n` (sample size), `lm` (LM statistic), `dof` (degrees of freedom).
+"""
+struct HarveyTestResult
+    n::Int
+    lm::Float64
+    dof::Int
+end
+
+"""
     harvey_test(X, y; intercept=true, Z=nothing) -> HarveyTestResult
     harvey_test(formula, data; Z=nothing) -> HarveyTestResult
 
@@ -24,12 +33,6 @@ the intercept).
 Harvey, A. C. (1976). Estimating regression models with multiplicative
 heteroscedasticity. *Econometrica*, 44(3), 461–465.
 """
-struct HarveyTestResult
-    n::Int
-    lm::Float64
-    dof::Int
-end
-
 function harvey_test(X::AbstractMatrix, y::AbstractVector;
                      intercept::Bool = true, Z = nothing)
     n      = length(y)
@@ -53,6 +56,15 @@ function Base.show(io::IO, t::HarveyTestResult)
     println(io, "Harvey test for multiplicative heteroskedasticity (exponential link)")
     println(io, "  H₀: γ = 0  in  log(σᵢ²) = γ₀ + zᵢ'γ")
     println(io, "  LM = $(round(t.lm, digits=4))   df = $(t.dof)   p-value = $(round(StatsAPI.pvalue(t), digits=4))")
+end
+
+"""
+Result of [`glejser_test`](@ref). Fields: `n` (sample size), `lm` (LM statistic), `dof` (degrees of freedom).
+"""
+struct GlejserTestResult
+    n::Int
+    lm::Float64
+    dof::Int
 end
 
 """
@@ -82,12 +94,6 @@ not affect the test statistic.
 Glejser, H. (1969). A new test for heteroskedasticity. *Journal of the American
 Statistical Association*, 64(325), 316–323.
 """
-struct GlejserTestResult
-    n::Int
-    lm::Float64
-    dof::Int
-end
-
 function glejser_test(X::AbstractMatrix, y::AbstractVector;
                       intercept::Bool = true, Z = nothing)
     n      = length(y)

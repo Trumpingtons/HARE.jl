@@ -18,6 +18,8 @@ JointResult
 BeachMacKinnonResult
 HeteroMLEResult
 GroupwiseResult
+HarveyTestResult
+GlejserTestResult
 WaldTestResult
 LRTestResult
 ```
@@ -81,6 +83,10 @@ beach_mackinnon
 ```@docs
 harvey_test
 glejser_test
+breusch_pagan_test
+white_test
+durbin_watson_test
+breusch_godfrey_test
 ```
 
 ## Model Comparison Tests
