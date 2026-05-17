@@ -761,7 +761,7 @@ end
 
 @testset "consistency (large n)" begin
     Random.seed!(2025)
-    N   = 50_000
+    N   = 100_000
     x1L = randn(N);  x2L = randn(N)
     XL  = hcat(x1L, x2L)
     XfL = hcat(ones(N), XL)
