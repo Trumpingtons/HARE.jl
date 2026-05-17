@@ -3,12 +3,16 @@
 **Heteroskedasticity and Autocorrelation Estimators** -- feasible GLS
 corrections for linear regression models.
 
-HARE.jl provides eight classical estimators covering three error structures:
+HARE.jl provides classical estimators and tests covering heteroskedasticity,
+AR(1) autocorrelation, and their combination:
 
-| Error structure | Estimators |
+| Error structure | Estimators / Tests |
 |:----------------|:-----------|
-| Multiplicative heteroskedasticity | [`two_step_harvey`](@ref), [`iterated_harvey`](@ref) |
-| AR(1) autocorrelation | [`two_step_prais_winsten`](@ref), [`iterated_prais_winsten`](@ref), [`hildreth_lu`](@ref) |
+| Exponential variance (Harvey) | [`two_step_harvey`](@ref), [`exponential_mle`](@ref), [`HarveyTest`](@ref) |
+| Quadratic variance (Glejser) | [`two_step_glejser`](@ref), [`quadratic_mle`](@ref), [`GlejserTest`](@ref) |
+| Linear variance | [`linear_mle`](@ref) |
+| Groupwise heteroscedasticity | [`two_step_groupwise`](@ref), [`iterated_groupwise`](@ref) |
+| AR(1) autocorrelation | [`two_step_prais_winsten`](@ref), [`iterated_prais_winsten`](@ref), [`two_step_cochrane_orcutt`](@ref), [`iterated_cochrane_orcutt`](@ref), [`hildreth_lu`](@ref) |
 | AR(1) + heteroskedasticity | [`two_step_sequential`](@ref), [`iterated_sequential`](@ref), [`two_step_joint`](@ref), [`iterated_joint`](@ref) |
 | AR(1) exact MLE | [`beach_mackinnon`](@ref) |
 

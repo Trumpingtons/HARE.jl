@@ -6,17 +6,17 @@ Includes two-step and iterated versions.
 """
 
 """
-    two_step_sequential(X, y; intercept=true) -> SequentialResult
-    two_step_sequential(formula, data) -> SequentialResult
+    two_step_sequential(X, y; intercept=true, Z=nothing) -> SequentialResult
+    two_step_sequential(formula, data; Z=nothing) -> SequentialResult
 
 Two-step Feasible GLS correcting sequentially for AR(1) autocorrelation **and**
 multiplicative heteroskedasticity (Sequential HARE).
 
 **Step 1.** OLS -> estimate rho via Cochrane-Orcutt.
 **Step 2.** Prais-Winsten transformation -> (Xstar, ystar).
-**Step 3.** Harvey log-variance auxiliary regression on the Prais-Winsten residuals against the
-  **original** regressors X (not Xstar), since the innovations u_pw_t = sigma_t * eps_t have
-  variance exp(X_t' * gamma) in the original space.
+**Step 3.** Harvey log-variance auxiliary regression on the Prais-Winsten residuals against Z
+  (default: augmented X), since the innovations u_pw_t = sigma_t * eps_t have
+  variance exp(Z_t' * gamma) in the original space.
 **Step 4.** WLS on (Xstar, ystar) with weights w.
 
 # Arguments
@@ -26,6 +26,9 @@ multiplicative heteroskedasticity (Sequential HARE).
                automatically.
 - `formula`  : `@formula` expression (formula method).
 - `data`     : Tables.jl-compatible data source (formula method).
+- `Z`        : n x p auxiliary regressor matrix for the variance equation,
+               **without** a constant column (default: `X`). A constant is
+               prepended internally.
 
 # Returns
 [`SequentialResult`](@ref). Use `stderror(result)` to obtain standard errors.
@@ -38,28 +41,30 @@ Oberhofer, W., & Kmenta, J. (1974). A general procedure for obtaining maximum
 likelihood estimates in generalized regression models. *Econometrica*,
 42(3), 579-590.
 """
-function two_step_sequential(X, y; intercept::Bool = true,
+function two_step_sequential(X, y; intercept::Bool = true, Z=nothing,
                              coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],
                              mf=nothing)
-    X                    = intercept ? hcat(ones(eltype(X), size(X,1)), X) : X
+    n                    = length(y)
+    X                    = intercept ? hcat(ones(eltype(X), n), X) : X
+    Z_full               = isnothing(Z) ? X : hcat(ones(n), Z)
     rho                  = estimate_rho(residuals(lm(X, y)))
     ystar, Xstar         = pw_transform(X, y, rho)
     u_pw                 = residuals(lm(Xstar, ystar))
-    w, gamma, gamma_vcov = harvey_weights(X, u_pw)
+    w, gamma, gamma_vcov = harvey_weights(Z_full, u_pw)
     model                = lm(Xstar, ystar, weights = w)
     beta                 = coef(model)
     f                    = X * beta
     return SequentialResult(beta, coefnames, mf, vcov(model), y .- f, f, rho, gamma, gamma_vcov, 1, true)
 end
 
-function two_step_sequential(formula::FormulaTerm, data; kwargs...)
+function two_step_sequential(formula::FormulaTerm, data; Z=nothing, kwargs...)
     X, y, cn, mf = _extract_Xy(formula, data)
-    return two_step_sequential(X, y; intercept=false, coefnames=cn, mf=mf, kwargs...)
+    return two_step_sequential(X, y; intercept=false, Z=Z, coefnames=cn, mf=mf, kwargs...)
 end
 
 """
-    iterated_sequential(X, y; intercept=true, tol=1e-8, maxiter=100) -> SequentialResult
-    iterated_sequential(formula, data; tol=1e-8, maxiter=100) -> SequentialResult
+    iterated_sequential(X, y; intercept=true, Z=nothing, tol=1e-8, maxiter=100) -> SequentialResult
+    iterated_sequential(formula, data; Z=nothing, tol=1e-8, maxiter=100) -> SequentialResult
 
 Iterated Feasible GLS correcting sequentially for AR(1) autocorrelation **and**
 multiplicative heteroskedasticity. Each iteration estimates rho, applies the
@@ -75,6 +80,9 @@ Convergence criterion:
                automatically.
 - `formula`  : `@formula` expression (formula method).
 - `data`     : Tables.jl-compatible data source (formula method).
+- `Z`        : n x p auxiliary regressor matrix for the variance equation,
+               **without** a constant column (default: `X`). A constant is
+               prepended internally.
 - `tol`      : convergence tolerance (default `1e-8`).
 - `maxiter`  : maximum number of iterations (default `100`).
 
@@ -86,20 +94,22 @@ Oberhofer, W., & Kmenta, J. (1974). A general procedure for obtaining maximum
 likelihood estimates in generalized regression models. *Econometrica*,
 42(3), 579-590.
 """
-function iterated_sequential(X, y; intercept::Bool = true, tol=1e-8, maxiter=100,
+function iterated_sequential(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, maxiter=100,
                              coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],
                              mf=nothing)
-    X          = intercept ? hcat(ones(eltype(X), size(X,1)), X) : X
+    n          = length(y)
+    X          = intercept ? hcat(ones(eltype(X), n), X) : X
+    Z_full     = isnothing(Z) ? X : hcat(ones(n), Z)
     model      = lm(X, y)
     rho        = estimate_rho(residuals(model))
-    gamma      = zeros(size(X, 2))
-    gamma_vcov = zeros(size(X, 2), size(X, 2))
+    gamma      = zeros(size(Z_full, 2))
+    gamma_vcov = zeros(size(Z_full, 2), size(Z_full, 2))
     for i in 1:maxiter
         beta_old             = coef(model)
         rho_old              = rho
         ystar, Xstar         = pw_transform(X, y, rho)
         u_pw                 = residuals(lm(Xstar, ystar))
-        w, gamma, gamma_vcov = harvey_weights(X, u_pw)
+        w, gamma, gamma_vcov = harvey_weights(Z_full, u_pw)
         model                = lm(Xstar, ystar, weights = w)
         rho                  = estimate_rho(y .- X * coef(model))
         if max(maximum(abs.(coef(model) .- beta_old)), abs(rho - rho_old)) < tol
@@ -113,7 +123,7 @@ function iterated_sequential(X, y; intercept::Bool = true, tol=1e-8, maxiter=100
     return SequentialResult(beta, coefnames, mf, vcov(model), y .- f, f, rho, gamma, gamma_vcov, maxiter, false)
 end
 
-function iterated_sequential(formula::FormulaTerm, data; kwargs...)
+function iterated_sequential(formula::FormulaTerm, data; Z=nothing, kwargs...)
     X, y, cn, mf = _extract_Xy(formula, data)
-    return iterated_sequential(X, y; intercept=false, coefnames=cn, mf=mf, kwargs...)
+    return iterated_sequential(X, y; intercept=false, Z=Z, coefnames=cn, mf=mf, kwargs...)
 end

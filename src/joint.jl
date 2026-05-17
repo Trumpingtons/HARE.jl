@@ -45,7 +45,7 @@ end
 function _joint_init(X, y, Z)
     u     = residuals(lm(X, y))
     rho0  = clamp(estimate_rho(u), -0.99, 0.99)
-    gamma0 = coef(lm(Z, log.(u.^2)))
+    gamma0 = coef(lm(Z, log.(u.^2) .- _HARVEY_C))
     return atanh(rho0), gamma0
 end
 
@@ -108,8 +108,9 @@ The variance model is `log(sigma_t^2) = z_t' * gamma` with auxiliary regressors 
                automatically.
 - `formula`  : `@formula` expression (formula method).
 - `data`     : Tables.jl-compatible data source (formula method).
-- `Z`        : n x p auxiliary regressor matrix for `log(sigma_t^2) = z_t' * gamma`
-               (default: augmented `X`). Must include a constant column.
+- `Z`        : n x p auxiliary regressor matrix for the variance equation,
+               **without** a constant column (default: `X`). A constant is
+               prepended internally.
 
 # Returns
 [`JointResult`](@ref).
@@ -140,8 +141,9 @@ likelihood estimates in generalized regression models. *Econometrica*,
 function two_step_joint(X, y; intercept::Bool = true, Z=nothing,
                         coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],
                         mf=nothing)
-    X                                    = intercept ? hcat(ones(eltype(X), size(X,1)), X) : X
-    Z                                    = isnothing(Z) ? X : Z
+    n                                    = length(y)
+    X                                    = intercept ? hcat(ones(eltype(X), n), X) : X
+    Z                                    = isnothing(Z) ? X : hcat(ones(n), Z)
     rho_hat, gamma_hat, gamma_vcov, ll, conv = _joint_opt_concentrated(X, y, Z)
     sigma_hat                            = sqrt.(exp.(Z * gamma_hat))
     ystar2, Xstar2                       = _joint_transform(X, y, rho_hat, sigma_hat)
@@ -154,7 +156,7 @@ end
 
 function two_step_joint(formula::FormulaTerm, data; Z=nothing, kwargs...)
     X, y, cn, mf = _extract_Xy(formula, data)
-    return two_step_joint(X, y; intercept=false, Z = isnothing(Z) ? X : Z, coefnames=cn, mf=mf, kwargs...)
+    return two_step_joint(X, y; intercept=false, Z=Z, coefnames=cn, mf=mf, kwargs...)
 end
 
 """
@@ -179,8 +181,9 @@ Convergence criterion:
                automatically.
 - `formula`  : `@formula` expression (formula method).
 - `data`     : Tables.jl-compatible data source (formula method).
-- `Z`        : n x p auxiliary regressor matrix for `log(sigma_t^2) = z_t' * gamma`
-               (default: augmented `X`). Must include a constant column.
+- `Z`        : n x p auxiliary regressor matrix for the variance equation,
+               **without** a constant column (default: `X`). A constant is
+               prepended internally.
 - `tol`      : convergence tolerance (default `1e-8`).
 - `maxiter`  : maximum number of iterations (default `100`).
 
@@ -195,8 +198,9 @@ likelihood estimates in generalized regression models. *Econometrica*,
 function iterated_joint(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, maxiter=100,
                         coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],
                         mf=nothing)
-    X               = intercept ? hcat(ones(eltype(X), size(X,1)), X) : X
-    Z               = isnothing(Z) ? X : Z
+    n               = length(y)
+    X               = intercept ? hcat(ones(eltype(X), n), X) : X
+    Z               = isnothing(Z) ? X : hcat(ones(n), Z)
     beta            = coef(lm(X, y))
     rho_unc, gamma  = _joint_init(X, y, Z)
     rho             = tanh(rho_unc)
@@ -229,5 +233,5 @@ end
 
 function iterated_joint(formula::FormulaTerm, data; Z=nothing, kwargs...)
     X, y, cn, mf = _extract_Xy(formula, data)
-    return iterated_joint(X, y; intercept=false, Z = isnothing(Z) ? X : Z, coefnames=cn, mf=mf, kwargs...)
+    return iterated_joint(X, y; intercept=false, Z=Z, coefnames=cn, mf=mf, kwargs...)
 end

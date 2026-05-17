@@ -11,15 +11,18 @@ HAREModel
 HarveyResult
 GlejserResult
 PraisWinstenResult
+CochranOrcuttResult
 HildrethLuResult
 SequentialResult
 JointResult
 BeachMacKinnonResult
+HeteroMLEResult
+GroupwiseResult
 WaldTestResult
 LRTestResult
 ```
 
-## Heteroskedasticity Estimators
+## Heteroskedasticity FWLS Estimators
 
 ```@docs
 two_step_harvey
@@ -28,11 +31,28 @@ two_step_glejser
 iterated_glejser
 ```
 
+## Heteroskedasticity MLE Estimators
+
+```@docs
+exponential_mle
+quadratic_mle
+linear_mle
+```
+
+## Groupwise Heteroscedasticity
+
+```@docs
+two_step_groupwise
+iterated_groupwise
+```
+
 ## AR(1) Estimators
 
 ```@docs
 two_step_prais_winsten
 iterated_prais_winsten
+two_step_cochrane_orcutt
+iterated_cochrane_orcutt
 hildreth_lu
 ```
 
@@ -56,7 +76,14 @@ iterated_joint
 beach_mackinnon
 ```
 
-## Hypothesis Tests
+## Heteroskedasticity Tests
+
+```@docs
+HarveyTest
+GlejserTest
+```
+
+## Model Comparison Tests
 
 ```@docs
 wald_test

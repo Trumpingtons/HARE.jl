@@ -1,4 +1,121 @@
 """
+    HarveyTest(X, y; intercept=true, Z=nothing) -> HarveyTest
+    HarveyTest(formula, data; Z=nothing) -> HarveyTest
+
+Lagrange multiplier test for multiplicative heteroskedasticity (Harvey 1976).
+
+Tests H₀: γ = 0 in the exponential variance model log(σᵢ²) = γ₀ + zᵢ'γ.
+
+The test statistic is LM = n·R² from the auxiliary regression of
+log(ûᵢ²) − c on Z (where c = E[log(χ²(1))] = −1.2703628454614782),
+distributed as χ²(p) under H₀, where p = dim(γ) (columns of Z excluding
+the intercept).
+
+# Arguments
+- `X`        : n × k regressor matrix without a constant column.
+- `y`        : response vector of length n.
+- `intercept`: if `true` (default), a constant is prepended to `X`.
+- `formula`  : `@formula` expression (formula method).
+- `data`     : Tables.jl-compatible data source (formula method).
+- `Z`        : auxiliary regressor matrix for the variance equation, without a
+               constant column (default: `X`). A constant is prepended internally.
+
+# References
+Harvey, A. C. (1976). Estimating regression models with multiplicative
+heteroscedasticity. *Econometrica*, 44(3), 461–465.
+"""
+struct HarveyTest
+    n::Int
+    lm::Float64
+    dof::Int
+end
+
+function HarveyTest(X::AbstractMatrix, y::AbstractVector;
+                    intercept::Bool = true, Z = nothing)
+    n      = length(y)
+    X_full = intercept ? hcat(ones(eltype(X), n), X) : X
+    Z_full = isnothing(Z) ? X_full : hcat(ones(n), Z)
+    e      = residuals(lm(X_full, y))
+    aux    = lm(Z_full, log.(e.^2) .- _HARVEY_C)
+    stat   = n * max(r2(aux), 0.0)
+    return HarveyTest(n, stat, size(Z_full, 2) - 1)
+end
+
+function HarveyTest(formula::FormulaTerm, data; Z = nothing, kwargs...)
+    X, y, _, _ = _extract_Xy(formula, data)
+    return HarveyTest(X, y; intercept = false, Z = Z, kwargs...)
+end
+
+StatsAPI.dof(t::HarveyTest)    = t.dof
+StatsAPI.pvalue(t::HarveyTest) = ccdf(Chisq(t.dof), t.lm)
+
+function Base.show(io::IO, t::HarveyTest)
+    println(io, "Harvey test for multiplicative heteroskedasticity (exponential link)")
+    println(io, "  H₀: γ = 0  in  log(σᵢ²) = γ₀ + zᵢ'γ")
+    println(io, "  LM = $(round(t.lm, digits=4))   df = $(t.dof)   p-value = $(round(StatsAPI.pvalue(t), digits=4))")
+end
+
+"""
+    GlejserTest(X, y; intercept=true, Z=nothing) -> GlejserTest
+    GlejserTest(formula, data; Z=nothing) -> GlejserTest
+
+Lagrange multiplier test for heteroskedasticity with a linear standard deviation
+(Glejser 1969).
+
+Tests H₀: γ = 0 in the quadratic variance model σᵢ = γ₀ + zᵢ'γ.
+
+The test statistic is LM = n·R² from the auxiliary regression of |ûᵢ| on Z,
+distributed as χ²(p) under H₀, where p = dim(γ) (columns of Z excluding the
+intercept).  The sqrt(π/2) scaling used in estimation cancels in R² and does
+not affect the test statistic.
+
+# Arguments
+- `X`        : n × k regressor matrix without a constant column.
+- `y`        : response vector of length n.
+- `intercept`: if `true` (default), a constant is prepended to `X`.
+- `formula`  : `@formula` expression (formula method).
+- `data`     : Tables.jl-compatible data source (formula method).
+- `Z`        : auxiliary regressor matrix for the variance equation, without a
+               constant column (default: `X`). A constant is prepended internally.
+
+# References
+Glejser, H. (1969). A new test for heteroskedasticity. *Journal of the American
+Statistical Association*, 64(325), 316–323.
+"""
+struct GlejserTest
+    n::Int
+    lm::Float64
+    dof::Int
+end
+
+function GlejserTest(X::AbstractMatrix, y::AbstractVector;
+                     intercept::Bool = true, Z = nothing)
+    n      = length(y)
+    X_full = intercept ? hcat(ones(eltype(X), n), X) : X
+    Z_full = isnothing(Z) ? X_full : hcat(ones(n), Z)
+    e      = residuals(lm(X_full, y))
+    aux    = lm(Z_full, abs.(e))
+    stat   = n * max(r2(aux), 0.0)
+    return GlejserTest(n, stat, size(Z_full, 2) - 1)
+end
+
+function GlejserTest(formula::FormulaTerm, data; Z = nothing, kwargs...)
+    X, y, _, _ = _extract_Xy(formula, data)
+    return GlejserTest(X, y; intercept = false, Z = Z, kwargs...)
+end
+
+StatsAPI.dof(t::GlejserTest)    = t.dof
+StatsAPI.pvalue(t::GlejserTest) = ccdf(Chisq(t.dof), t.lm)
+
+function Base.show(io::IO, t::GlejserTest)
+    println(io, "Glejser test for heteroskedasticity (quadratic link / linear SD)")
+    println(io, "  H₀: γ = 0  in  σᵢ = γ₀ + zᵢ'γ")
+    println(io, "  LM = $(round(t.lm, digits=4))   df = $(t.dof)   p-value = $(round(StatsAPI.pvalue(t), digits=4))")
+end
+
+# ---------------------------------------------------------------------------
+
+"""
 Result of a Wald test for linear restrictions R*beta = r.
 
 Fields: `stat` (F statistic), `df` (numerator), `df_residual` (denominator), `pvalue`.

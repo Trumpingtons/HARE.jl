@@ -19,30 +19,40 @@ using Optim
 using ForwardDiff
 using Distributions
 import StatsBase
+import StatsAPI
+using StatsAPI: pvalue, dof
 
 export HAREModel
-export HarveyResult, GlejserResult, PraisWinstenResult, HildrethLuResult, SequentialResult, JointResult, BeachMacKinnonResult
+export HarveyResult, GlejserResult, PraisWinstenResult, CochranOrcuttResult, HildrethLuResult, SequentialResult, JointResult, BeachMacKinnonResult, HeteroMLEResult, GroupwiseResult
 export tstat, pvalues, sigma2
 export wald_test, WaldTestResult, LRTestResult
+export HarveyTest, GlejserTest
+export pvalue, dof
 export two_step_harvey, iterated_harvey
 export two_step_glejser, iterated_glejser
 export two_step_prais_winsten, iterated_prais_winsten
+export two_step_cochrane_orcutt, iterated_cochrane_orcutt
 export hildreth_lu
 export two_step_sequential, iterated_sequential
 export two_step_joint, iterated_joint
 export beach_mackinnon
+export exponential_mle, quadratic_mle, linear_mle
+export two_step_groupwise, iterated_groupwise
 
 include("types.jl")
 include("interfaces.jl")
 include("show.jl")
-include("tests.jl")
 include("auxiliary.jl")
+include("tests.jl")
 include("harvey.jl")
 include("glejser.jl")
+include("hetero_mle.jl")
 include("prais_winsten.jl")
+include("cochrane_orcutt.jl")
 include("hildreth_lu.jl")
 include("beach_mackinnon.jl")
 include("sequential.jl")
 include("joint.jl")
+include("groupwise.jl")
 
 end # module HARE

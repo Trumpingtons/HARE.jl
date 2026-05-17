@@ -27,15 +27,15 @@ American Statistical Association*, 44(245), 32-61.
 estimate_rho(u) = sum(u[2:end] .* u[1:end-1]) / sum(u[1:end-1].^2)
 
 """
-    harvey_weights(X, u) -> (Vector{Float64}, Vector{Float64})
+    harvey_weights(Z, u) -> (Vector{Float64}, Vector{Float64})
 
 Compute inverse-variance weights for FWLS using Harvey's multiplicative
 heteroskedasticity model. The log-variance is modelled as a linear function
-of the regressors:
+of auxiliary regressors:
 
-    log(sigma_i^2) = X_i * gamma
+    log(sigma_i^2) = Z_i * gamma
 
-Weights are `w_i = 1 / exp(X_i * gamma_hat)`, consistent estimates of
+Weights are `w_i = 1 / exp(Z_i * gamma_hat)`, consistent estimates of
 `1/sigma_i^2` under the Harvey model.
 
 ## Bias correction
@@ -43,7 +43,7 @@ Weights are `w_i = 1 / exp(X_i * gamma_hat)`, consistent estimates of
 The naive auxiliary regression of `log(u_hat_i^2)` on `X` yields a biased
 estimator of `gamma` because `log(u_hat_i^2) = X_i*gamma + log(eps_i^2)` and
 
-    E[log(eps_i^2)] = E[log(chi^2(1))] = digamma(1/2) + log(2) ≈ -1.2703.
+    E[log(eps_i^2)] = E[log(chi^2(1))] = digamma(1/2) + log(2) = -1.2703628454614782.
 
 This non-zero mean shifts the OLS estimate by `(X'X)^{-1} X' * c * 1`, which
 in general contaminates all coefficients, not just the intercept, whenever the
@@ -75,9 +75,10 @@ Judge, G. G., Griffiths, W. E., Hill, R. C., Lütkepohl, H., & Lee, T. C.
 
 Amemiya, T. (1985). *Advanced Econometrics*. Harvard University Press.
 """
-function harvey_weights(X, u)
-    c     = -1.2703264837432   # E[log(chi^2(1))] = digamma(1/2) + log(2)
-    aux   = lm(X, log.(u.^2) .- c)
+const _HARVEY_C = -1.2703628454614782   # E[log(χ²(1))] = digamma(1/2) + log(2)
+
+function harvey_weights(Z, u)
+    aux   = lm(Z, log.(u.^2) .- _HARVEY_C)
     gamma = coef(aux)
     return 1.0 ./ exp.(fitted(aux)), gamma, vcov(aux)
 end
@@ -102,10 +103,13 @@ Glejser, H. (1969). A new test for heteroskedasticity. *Journal of the
 American Statistical Association*, 64(325), 316-323.
 """
 function glejser_weights(Z, u)
+    # E[|eps_i|] = sqrt(2/pi) for eps_i ~ N(0,1), so OLS of |u| on Z converges to
+    # gamma * sqrt(2/pi).  Multiply by sqrt(pi/2) to obtain consistent gamma estimates.
     aux       = lm(Z, abs.(u))
-    gamma     = coef(aux)
-    sigma_hat = max.(fitted(aux), 1e-8)
-    return 1.0 ./ sigma_hat.^2, gamma, vcov(aux)
+    c         = sqrt(π / 2)
+    gamma     = coef(aux) .* c
+    sigma_hat = max.(fitted(aux) .* c, 1e-8)
+    return 1.0 ./ sigma_hat.^2, gamma, vcov(aux) .* (π / 2)
 end
 
 """
