@@ -222,24 +222,24 @@ would be unnecessary: it requires two transcendental evaluations per observation
 versus a single comparison, and ForwardDiff propagates derivatives through both,
 adding cost with no benefit.
 
-**Linear link.**  Rather than a hard clamp, the implementation uses the
-**softplus** function:
+**Linear link.**  Uses a **hard clamp** $\tilde{\sigma}_i^2 = \max(\mathbf{z}_i^\top\hat{\boldsymbol{\gamma}},\,10^{-10})$
+combined with a **box constraint** on the variance intercept: $\gamma_0 \geq 10^{-8}$.
+The box constraint is enforced by replacing the unconstrained L-BFGS call with
+`Fminbox(LBFGS())` (Optim.jl), which wraps the optimizer in a projected-gradient
+framework and keeps $\gamma_0$ non-negative throughout the line search.  The
+remaining parameters are unconstrained.
 
-$$\tilde{\sigma}_i^2 = \log\!\left(1 + e^{\,\mathbf{z}_i^\top\boldsymbol{\gamma}}\right)$$
-
-Softplus is smooth and strictly positive everywhere, so ForwardDiff computes exact,
-continuous gradients throughout the L-BFGS line search.  The linear link is the
-problematic case: its warm start is deliberately flat ($\gamma_0 = \bar{u}^2$, all
-slopes $= 0$) to guarantee a feasible starting point, but this gives L-BFGS no
-directional information about the slopes.  The optimizer immediately explores slope
-directions that push some $\sigma_i^2$ negative, hitting the clamp on the very
-first line search.  A hard clamp creates a kink at zero: the gradient reported by
-ForwardDiff is accurate within each piece but the non-smoothness causes L-BFGS to
-make poor curvature estimates when the iterate crosses the boundary, which can
-prevent convergence — particularly on Windows x86 and macOS ARM where
-floating-point evaluation order differs.  For $\sigma_i^2$ well above zero,
-$\log(1 + e^x) \approx x$, so the effective model is indistinguishable from the
-true linear variance function in the well-specified region.
+**Why not softplus.**  Softplus ($\tilde{\sigma}^2 = \log(1+e^x)$) is smooth and
+strictly positive everywhere, which makes it attractive in principle.  However, it
+changes the model: the estimated $\boldsymbol{\gamma}$ no longer corresponds to the
+linear variance function $\sigma_i^2 = \mathbf{z}_i^\top\boldsymbol{\gamma}$, and
+the transformation is not invertible in a simple closed form.  More practically,
+softplus adds two transcendental evaluations per observation (exp + log), increases
+AD tape complexity, and was found to destabilise convergence in numerical experiments
+on the test data.  The hard clamp + Fminbox combination is simpler, interpretable,
+and sufficient: the box constraint prevents L-BFGS from pushing $\gamma_0$ negative
+during early line searches, and the hard clamp is a last-resort safeguard that is
+rarely triggered once the optimizer is in the feasible region.
 
 ### Optimisation
 
@@ -254,6 +254,32 @@ the problem dimension substantially — here the mean and variance parameters
 enter the gradient in a coupled way that does not yield a cheap closed-form
 profile.  Joint L-BFGS with AD is straightforward and fast for the parameter
 dimensions typical of these models.
+
+**Choice of Fminbox (box-constrained L-BFGS) for the linear link.**  The
+linear link requires $\sigma_i^2 = \gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma} > 0$
+for all $i$.  This is a constraint on the parameter space, not a model
+transformation.  The variance intercept $\gamma_0$ must be positive; otherwise
+the constant-variance warm start ($\boldsymbol{\gamma} = \mathbf{0}$, $\gamma_0 = \bar{u}^2$)
+immediately gives L-BFGS freedom to push $\gamma_0$ negative in the first
+line search step, making $\sigma_i^2 \leq 0$ at some observations.  The hard
+clamp catches this, but the resulting kink destabilises the BFGS Hessian
+approximation: the curvature estimated from gradient differences across the
+kink is spurious, and the method can stall or diverge.
+
+`Fminbox(LBFGS())` enforces $\gamma_0 \geq 10^{-8}$ via a projected-gradient
+strategy: at each iteration the step is projected back onto the feasible box
+before the Wolfe-condition line search, so the BFGS curvature estimates are
+always computed within the feasible (smooth) region.  All other parameters
+remain unconstrained ($\boldsymbol{\beta}$ and the slope parameters
+$\boldsymbol{\gamma}_{2:\mathrm{end}}$ are unbounded).
+
+**Why not softplus instead.**  Softplus $\tilde{\sigma}_i^2 = \log(1 + e^{\mathbf{z}_i^\top\boldsymbol{\gamma}})$
+makes the parameter space unconstrained by changing the model: the estimated
+$\boldsymbol{\gamma}$ no longer corresponds to the linear variance function
+$\sigma_i^2 = \mathbf{z}_i^\top\boldsymbol{\gamma}$.  The numerical behaviour
+was also found to be worse in practice.  Box constraints preserve the model
+semantics and require only a thin wrapper around the same L-BFGS core used
+for the other links.
 
 ### Warm starts
 
@@ -284,6 +310,46 @@ This is the full-information MLE standard error, accounting for joint
 estimation of mean and variance parameters.  It is asymptotically efficient
 under correct specification and normality, in contrast to the FWLS standard
 errors in Sections 2–3 which are conditional on the estimated weights.
+
+### Hessian robustness for the linear link
+
+**Problem.**  The hard clamp $\max(\sigma_i^2, 10^{-10})$ in the linear link
+likelihood creates a kink: the function is piecewise smooth but not globally
+smooth at observations where the clamp is active.  `ForwardDiff.hessian`
+computes the exact Hessian *within* each smooth piece, but when the
+optimum sits near the clamp boundary the Hessian can fail to be positive
+definite (PD).  On some platforms — in particular macOS ARM64 (Apple
+Silicon) running Julia 1.10 — floating-point evaluation order differs enough
+from x86 that the Hessian is numerically non-PD more frequently.  `inv(H)`
+with a non-PD matrix produces negative diagonal entries in the vcov, making
+all reported standard errors imaginary and causing tests like
+`all(diag(m.gamma_vcov) .> 0)` to fail.
+
+**Alternatives considered.**
+
+| Option | Why rejected |
+|---|---|
+| Softplus link | Changes the model semantics; destabilises convergence (see above) |
+| Perturb Hessian: $H + \lambda I$ | Arbitrary $\lambda$ distorts standard errors; no principled choice |
+| Cholesky with fallback | More invasive; still requires choosing a perturbation magnitude |
+| Ignore non-PD (return NaN SEs) | Silently wrong output; fails CI |
+| Finite-difference Hessian | Slower and less accurate than AD; does not fix the non-smoothness |
+
+**Solution.**  After computing `H = ForwardDiff.hessian(nll, theta_hat)`:
+
+1. Wrap as `Symmetric(H)` before inversion.  This enforces exact symmetry
+   (ForwardDiff can produce tiny asymmetries from floating-point cancellation)
+   and allows `inv` to use a symmetric-specific LAPACK path.
+2. If the result still has any non-positive diagonal entry (which only
+   happens for the linear link on pathological platforms/seeds), fall back to
+   `pinv(Symmetric(H))` — the Moore-Penrose pseudoinverse.  `pinv` uses an
+   SVD, thresholds near-zero singular values to zero, and thereby produces a
+   PD (or at least positive-semidefinite) result even when `H` is numerically
+   singular.
+
+The fallback is guarded by `link === :linear` so the exponential, quadratic,
+and power links — which never produce non-PD Hessians in practice — are
+unaffected and pay no extra cost.
 
 ### References
 

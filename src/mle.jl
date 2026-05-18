@@ -69,8 +69,11 @@ function _hetero_mle_core(X_full, Z_full, y, link, theta0; tol, maxiter)
                        autodiff=:forward)
     end
     theta_hat = Optim.minimizer(res)
-    H         = ForwardDiff.hessian(nll, theta_hat)
+    H         = Symmetric(ForwardDiff.hessian(nll, theta_hat))
     vcov_full = inv(H)
+    if link === :linear && any(diag(vcov_full) .<= 0)
+        vcov_full = pinv(H)
+    end
     loglik    = -Optim.minimum(res) - n/2 * log(2π)
     return theta_hat, vcov_full, loglik, Optim.converged(res), Optim.iterations(res)
 end
@@ -198,8 +201,8 @@ function quadratic_mle(formula::FormulaTerm, data; Z=nothing, kwargs...)
 end
 
 """
-    linear_mle(X, y; Z=nothing, intercept=true, tol=1e-10, maxiter=1000) -> MLEResult
-    linear_mle(formula, data; Z=nothing, tol=1e-10, maxiter=1000) -> MLEResult
+    linear_mle(X, y; Z=nothing, intercept=true, tol=1e-8, maxiter=1000) -> MLEResult
+    linear_mle(formula, data; Z=nothing, tol=1e-8, maxiter=1000) -> MLEResult
 
 Maximum likelihood estimation of the heteroskedastic regression model with a
 linear variance function:
@@ -233,7 +236,7 @@ Corresponds to SAS `PROC AUTOREG HETERO LINK=LINEAR`.
 # Returns
 [`MLEResult`](@ref) with `link = :linear`.
 """
-function linear_mle(X, y; intercept::Bool = true, Z=nothing, tol=1e-10, maxiter=1000,
+function linear_mle(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, maxiter=1000,
                     coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],
                     mf=nothing)
     n      = length(y)
