@@ -6,9 +6,9 @@ Implements the standard statistical interface for all result types:
 """
 
 StatsBase.islinear(m::HAREModel)                    = true
-StatsBase.loglikelihood(m::BeachMacKinnonResult)   = m.loglik
+StatsBase.loglikelihood(m::AR1Result)              = m.loglik
 StatsBase.loglikelihood(m::JointResult)            = m.loglik
-StatsBase.loglikelihood(m::HeteroMLEResult)        = m.loglik
+StatsBase.loglikelihood(m::MLEResult)        = m.loglik
 StatsBase.loglikelihood(m::GroupwiseResult)        = m.loglik
 StatsBase.responsename(m::HAREModel)      = isnothing(m.mf) ? nothing : string(m.mf.f.lhs)
 StatsBase.coef(m::HAREModel)              = m.coef

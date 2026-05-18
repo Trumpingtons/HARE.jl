@@ -15,10 +15,18 @@ Lagrange multiplier test for multiplicative heteroskedasticity (Harvey 1976).
 
 Tests H₀: γ = 0 in the exponential variance model log(σᵢ²) = γ₀ + zᵢ'γ.
 
-The test statistic is LM = n·R² from the auxiliary regression of
-log(ûᵢ²) − c on Z (where c = E[log(χ²(1))] = −1.2703628454614782),
-distributed as χ²(p) under H₀, where p = dim(γ) (columns of Z excluding
-the intercept).
+The test statistic is
+
+    LM = ESS / trigamma(1/2)
+
+where ESS is the explained sum of squares from the auxiliary OLS regression of
+log(ûᵢ²) − c on Z (c = E[log(χ²(1))] = −1.2703628454614782), and
+trigamma(1/2) = π²/2 is the variance of log(χ²(1)).  The statistic is
+distributed as χ²(p) under H₀, where p = dim(γ) (columns of Z excluding the
+intercept).
+
+This is Harvey's (1976) exact score-test formula.  It differs from the
+generic LM form n·R² but is asymptotically equivalent.
 
 # Arguments
 - `X`        : n × k regressor matrix without a constant column.
@@ -39,14 +47,16 @@ function harvey_test(X::AbstractMatrix, y::AbstractVector;
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
     Z_full = isnothing(Z) ? X_full : hcat(ones(n), Z)
     e      = residuals(lm(X_full, y))
-    aux    = lm(Z_full, log.(e.^2) .- _HARVEY_C)
-    stat   = n * max(r2(aux), 0.0)
+    y_aux  = log.(e.^2) .- _HARVEY_C
+    aux    = lm(Z_full, y_aux)
+    ess    = sum((y_aux .- mean(y_aux)).^2) - sum(residuals(aux).^2)
+    stat   = max(ess, 0.0) / (π^2 / 2)
     return HarveyTestResult(n, stat, size(Z_full, 2) - 1)
 end
 
 function harvey_test(formula::FormulaTerm, data; Z = nothing, kwargs...)
     X, y, _, _ = _extract_Xy(formula, data)
-    return harvey_test(X, y; intercept = false, Z = Z, kwargs...)
+    return harvey_test(X, y; intercept = false, Z = _extract_Z_maybe(Z, data), kwargs...)
 end
 
 StatsAPI.dof(t::HarveyTestResult)    = t.dof
@@ -76,10 +86,18 @@ Lagrange multiplier test for heteroskedasticity with a linear standard deviation
 
 Tests H₀: γ = 0 in the quadratic variance model σᵢ = γ₀ + zᵢ'γ.
 
-The test statistic is LM = n·R² from the auxiliary regression of |ûᵢ| on Z,
-distributed as χ²(p) under H₀, where p = dim(γ) (columns of Z excluding the
-intercept).  The sqrt(π/2) scaling used in estimation cancels in R² and does
-not affect the test statistic.
+The test statistic is
+
+    LM = ESS_|û| / (σ̂² · (1 − 2/π))
+
+where ESS_|û| is the explained sum of squares from the auxiliary OLS regression
+of |ûᵢ| on Z, σ̂² = (1/n)Σûᵢ² is the OLS variance estimate from the main
+regression, and (1 − 2/π) = Var(|N(0,1)|) is the variance of the half-normal.
+The statistic is distributed as χ²(p) under H₀, where p = dim(γ) (columns of
+Z excluding the intercept).
+
+This is Glejser's (1969) exact score-test formula.  It differs from the
+generic LM form n·R² but is asymptotically equivalent.
 
 # Arguments
 - `X`        : n × k regressor matrix without a constant column.
@@ -100,14 +118,17 @@ function glejser_test(X::AbstractMatrix, y::AbstractVector;
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
     Z_full = isnothing(Z) ? X_full : hcat(ones(n), Z)
     e      = residuals(lm(X_full, y))
-    aux    = lm(Z_full, abs.(e))
-    stat   = n * max(r2(aux), 0.0)
+    y_abs  = abs.(e)
+    aux    = lm(Z_full, y_abs)
+    σ̂²    = sum(e.^2) / n
+    ess    = sum((y_abs .- mean(y_abs)).^2) - sum(residuals(aux).^2)
+    stat   = max(ess, 0.0) / (σ̂² * (1 - 2/π))
     return GlejserTestResult(n, stat, size(Z_full, 2) - 1)
 end
 
 function glejser_test(formula::FormulaTerm, data; Z = nothing, kwargs...)
     X, y, _, _ = _extract_Xy(formula, data)
-    return glejser_test(X, y; intercept = false, Z = Z, kwargs...)
+    return glejser_test(X, y; intercept = false, Z = _extract_Z_maybe(Z, data), kwargs...)
 end
 
 StatsAPI.dof(t::GlejserTestResult)    = t.dof
@@ -326,7 +347,7 @@ Likelihood ratio test comparing two nested Beach-MacKinnon models.
 `m_r` is the restricted (fewer parameters) model; `m_u` is the unrestricted model.
 LR = 2*(L_u - L_r) ~ chi^2(q) where q = dof(m_u) - dof(m_r).
 """
-function StatsModels.lrtest(m_r::BeachMacKinnonResult, m_u::BeachMacKinnonResult)
+function StatsModels.lrtest(m_r::AR1Result, m_u::AR1Result)
     df = dof(m_u) - dof(m_r)
     df > 0 || throw(ArgumentError(
         "unrestricted model must have more parameters than restricted model"))

@@ -11,9 +11,9 @@ end
 _show_stats(io::IO, m::HAREModel) =
     println(io, "N: $(nobs(m))   R^2: $(round(r2(m), digits=4))   Adj. R^2: $(round(adjr2(m), digits=4))")
 
-function _gamma_coeftable(gamma, gamma_vcov)
+function _gamma_coeftable(gamma, gamma_vcov, intercept_name::String)
     p     = length(gamma)
-    names = ["(Intercept)"; ["z$i" for i in 1:(p-1)]]
+    names = [intercept_name; ["z$i" for i in 1:(p-1)]]
     se    = sqrt.(diag(gamma_vcov))
     t     = gamma ./ se
     pv    = 2 .* ccdf.(Normal(), abs.(t))
@@ -25,16 +25,18 @@ function _gamma_coeftable(gamma, gamma_vcov)
     )
 end
 
-function _show_extra(io::IO, m::HarveyResult)
-    println(io, "Variance equation (gamma):")
-    show(io, MIME("text/plain"), _gamma_coeftable(m.gamma, m.gamma_vcov))
-    println(io)
-    m.iterations > 1 && println(io, "Converged: $(m.converged)   Iterations: $(m.iterations)")
-end
-
-function _show_extra(io::IO, m::GlejserResult)
-    println(io, "Std. deviation equation (gamma):")
-    show(io, MIME("text/plain"), _gamma_coeftable(m.gamma, m.gamma_vcov))
+function _show_extra(io::IO, m::FWLSResult)
+    label, intercept_name = if m.link === :exponential
+        "Log-variance equation (gamma):", "log σ₀²"
+    elseif m.link === :quadratic
+        "Std. deviation equation (gamma):", "σ₀"
+    elseif m.link === :power
+        "Power variance equation (log σ², 2δ):", "log σ²"
+    else
+        "Variance equation (gamma):", "σ₀²"
+    end
+    println(io, label)
+    show(io, MIME("text/plain"), _gamma_coeftable(m.gamma, m.gamma_vcov, intercept_name))
     println(io)
     m.iterations > 1 && println(io, "Converged: $(m.converged)   Iterations: $(m.iterations)")
 end
@@ -51,33 +53,25 @@ function _rho_coeftable(rho, n)
     )
 end
 
-function _show_extra(io::IO, m::PraisWinstenResult)
+function _show_extra(io::IO, m::AR1Result)
     println(io, "AR(1) coefficient:")
     show(io, MIME("text/plain"), _rho_coeftable(m.rho, nobs(m)))
     println(io)
-    m.iterations > 1 && println(io, "Converged: $(m.converged)   Iterations: $(m.iterations)")
-end
-
-function _show_extra(io::IO, m::CochranOrcuttResult)
-    println(io, "AR(1) coefficient:")
-    show(io, MIME("text/plain"), _rho_coeftable(m.rho, nobs(m)))
-    println(io)
-    m.iterations > 1 && println(io, "Converged: $(m.converged)   Iterations: $(m.iterations)")
-end
-
-function _show_extra(io::IO, m::HildrethLuResult)
-    println(io, "AR(1) coefficient:")
-    show(io, MIME("text/plain"), _rho_coeftable(m.rho, nobs(m)))
-    println(io)
-    println(io, "Grid points: $(m.iterations)")
+    if m.method === :hildreth_lu
+        println(io, "Grid points: $(m.iterations)")
+    elseif m.method === :beach_mackinnon
+        println(io, "Log-likelihood: $(round(m.loglik, digits=4))   Converged: $(m.converged)")
+    else
+        m.iterations > 1 && println(io, "Converged: $(m.converged)   Iterations: $(m.iterations)")
+    end
 end
 
 function _show_extra(io::IO, m::SequentialResult)
     println(io, "AR(1) coefficient:")
     show(io, MIME("text/plain"), _rho_coeftable(m.rho, nobs(m)))
     println(io)
-    println(io, "Variance equation (gamma):")
-    show(io, MIME("text/plain"), _gamma_coeftable(m.gamma, m.gamma_vcov))
+    println(io, "Log-variance equation (gamma):")
+    show(io, MIME("text/plain"), _gamma_coeftable(m.gamma, m.gamma_vcov, "log σ₀²"))
     println(io)
     m.iterations > 1 && println(io, "Converged: $(m.converged)   Iterations: $(m.iterations)")
 end
@@ -86,8 +80,8 @@ function _show_extra(io::IO, m::JointResult)
     println(io, "AR(1) coefficient:")
     show(io, MIME("text/plain"), _rho_coeftable(m.rho, nobs(m)))
     println(io)
-    println(io, "Variance equation (gamma):")
-    show(io, MIME("text/plain"), _gamma_coeftable(m.gamma, m.gamma_vcov))
+    println(io, "Log-variance equation (gamma):")
+    show(io, MIME("text/plain"), _gamma_coeftable(m.gamma, m.gamma_vcov, "log σ₀²"))
     println(io)
     if m.iterations > 1
         println(io, "Log-likelihood: $(round(m.loglik, digits=4))   Converged: $(m.converged)   Iterations: $(m.iterations)")
@@ -96,13 +90,21 @@ function _show_extra(io::IO, m::JointResult)
     end
 end
 
-function _show_extra(io::IO, m::HeteroMLEResult)
-    link_str = m.link === :exponential ? "Exponential — σ²ᵢ = exp(γ₀ + zᵢ′γ)  [Harvey 1976]" :
-               m.link === :quadratic   ? "Quadratic   — σᵢ  = γ₀ + zᵢ′γ        [Glejser 1969]" :
+function _show_extra(io::IO, m::MLEResult)
+    link_str = m.link === :exponential ? "Exponential — σ²ᵢ = exp(γ₀ + zᵢ′γ)    [Harvey 1976]" :
+               m.link === :quadratic   ? "Quadratic   — σᵢ  = γ₀ + zᵢ′γ          [Glejser 1969]" :
+               m.link === :power       ? "Power       — log σ²ᵢ = γ₀ + Σγⱼlog|zᵢⱼ|" :
                                          "Linear      — σ²ᵢ = γ₀ + zᵢ′γ"
+    intercept_name = m.link === :exponential ? "log σ₀²" :
+                     m.link === :quadratic   ? "σ₀"      :
+                     m.link === :power       ? "log σ²"  : "σ₀²"
+    eq_str = m.link === :exponential ? "Log-variance equation (gamma):" :
+             m.link === :quadratic   ? "Std. deviation equation (gamma):" :
+             m.link === :power       ? "Power variance equation (log σ², 2δ):" :
+                                       "Variance equation (gamma):"
     println(io, "Link: $link_str")
-    println(io, "Variance equation (gamma):")
-    show(io, MIME("text/plain"), _gamma_coeftable(m.gamma, m.gamma_vcov))
+    println(io, eq_str)
+    show(io, MIME("text/plain"), _gamma_coeftable(m.gamma, m.gamma_vcov, intercept_name))
     println(io)
     println(io, "Log-likelihood: $(round(m.loglik, digits=4))   Converged: $(m.converged)   Iterations: $(m.iterations)")
 end
@@ -125,12 +127,6 @@ function _show_extra(io::IO, m::GroupwiseResult)
     end
 end
 
-function _show_extra(io::IO, m::BeachMacKinnonResult)
-    println(io, "AR(1) coefficient:")
-    show(io, MIME("text/plain"), _rho_coeftable(m.rho, nobs(m)))
-    println(io)
-    println(io, "Log-likelihood: $(round(m.loglik, digits=4))   Converged: $(m.converged)")
-end
 
 function Base.show(io::IO, m::HAREModel)
     println(io, "Coefficients:")

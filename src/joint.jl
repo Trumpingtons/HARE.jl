@@ -156,7 +156,7 @@ end
 
 function two_step_joint(formula::FormulaTerm, data; Z=nothing, kwargs...)
     X, y, cn, mf = _extract_Xy(formula, data)
-    return two_step_joint(X, y; intercept=false, Z=Z, coefnames=cn, mf=mf, kwargs...)
+    return two_step_joint(X, y; intercept=false, Z=_extract_Z_maybe(Z, data), coefnames=cn, mf=mf, kwargs...)
 end
 
 """
@@ -233,5 +233,5 @@ end
 
 function iterated_joint(formula::FormulaTerm, data; Z=nothing, kwargs...)
     X, y, cn, mf = _extract_Xy(formula, data)
-    return iterated_joint(X, y; intercept=false, Z=Z, coefnames=cn, mf=mf, kwargs...)
+    return iterated_joint(X, y; intercept=false, Z=_extract_Z_maybe(Z, data), coefnames=cn, mf=mf, kwargs...)
 end

@@ -15,8 +15,8 @@ function co_transform(X, y, rho)
 end
 
 """
-    two_step_cochrane_orcutt(X, y; intercept=true) -> CochranOrcuttResult
-    two_step_cochrane_orcutt(formula, data) -> CochranOrcuttResult
+    two_step_cochrane_orcutt(X, y; intercept=true) -> AR1Result
+    two_step_cochrane_orcutt(formula, data) -> AR1Result
 
 Two-step Cochrane-Orcutt GLS estimator for AR(1) autocorrelation.
 
@@ -39,7 +39,7 @@ Two-step Cochrane-Orcutt GLS estimator for AR(1) autocorrelation.
 - `data`     : Tables.jl-compatible data source (formula method).
 
 # Returns
-[`CochranOrcuttResult`](@ref).
+[`AR1Result`](@ref).
 
 # Examples
 ```jldoctest
@@ -72,7 +72,7 @@ function two_step_cochrane_orcutt(X, y; intercept::Bool = true,
     model          = lm(Xstar, ystar)
     beta           = coef(model)
     f              = X * beta
-    return CochranOrcuttResult(beta, coefnames, mf, vcov(model), y .- f, f, rho, 1, true)
+    return AR1Result(beta, coefnames, mf, vcov(model), y .- f, f, rho, NaN, NaN, 1, true, :cochrane_orcutt)
 end
 
 function two_step_cochrane_orcutt(formula::FormulaTerm, data; kwargs...)
@@ -81,8 +81,8 @@ function two_step_cochrane_orcutt(formula::FormulaTerm, data; kwargs...)
 end
 
 """
-    iterated_cochrane_orcutt(X, y; intercept=true, tol=1e-8, maxiter=100) -> CochranOrcuttResult
-    iterated_cochrane_orcutt(formula, data; tol=1e-8, maxiter=100) -> CochranOrcuttResult
+    iterated_cochrane_orcutt(X, y; intercept=true, tol=1e-8, maxiter=100) -> AR1Result
+    iterated_cochrane_orcutt(formula, data; tol=1e-8, maxiter=100) -> AR1Result
 
 Iterated Cochrane-Orcutt GLS estimator for AR(1) errors.  Alternates between
 estimating rho and re-fitting by CO quasi-differencing until
@@ -105,7 +105,7 @@ estimating rho and re-fitting by CO quasi-differencing until
 - `maxiter`  : maximum number of iterations (default `100`).
 
 # Returns
-[`CochranOrcuttResult`](@ref).
+[`AR1Result`](@ref).
 
 # References
 Cochrane, D., & Orcutt, G. H. (1949). Application of least squares regression
@@ -126,12 +126,12 @@ function iterated_cochrane_orcutt(X, y; intercept::Bool = true, tol=1e-8, maxite
         if abs(rho - rho_old) < tol
             beta = coef(model)
             f    = X * beta
-            return CochranOrcuttResult(beta, coefnames, mf, vcov(model), y .- f, f, rho, i, true)
+            return AR1Result(beta, coefnames, mf, vcov(model), y .- f, f, rho, NaN, NaN, i, true, :cochrane_orcutt)
         end
     end
     beta = coef(model)
     f    = X * beta
-    return CochranOrcuttResult(beta, coefnames, mf, vcov(model), y .- f, f, rho, maxiter, false)
+    return AR1Result(beta, coefnames, mf, vcov(model), y .- f, f, rho, NaN, NaN, maxiter, false, :cochrane_orcutt)
 end
 
 function iterated_cochrane_orcutt(formula::FormulaTerm, data; kwargs...)

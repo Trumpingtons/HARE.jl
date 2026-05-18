@@ -27,7 +27,7 @@ American Statistical Association*, 44(245), 32-61.
 estimate_rho(u) = sum(u[2:end] .* u[1:end-1]) / sum(u[1:end-1].^2)
 
 """
-    harvey_weights(Z, u) -> (Vector{Float64}, Vector{Float64})
+    exponential_weights(Z, u) -> (Vector{Float64}, Vector{Float64})
 
 Compute inverse-variance weights for FWLS using Harvey's multiplicative
 heteroskedasticity model. The log-variance is modelled as a linear function
@@ -77,14 +77,14 @@ Amemiya, T. (1985). *Advanced Econometrics*. Harvard University Press.
 """
 const _HARVEY_C = -1.2703628454614782   # E[log(χ²(1))] = digamma(1/2) + log(2)
 
-function harvey_weights(Z, u)
+function exponential_weights(Z, u)
     aux   = lm(Z, log.(u.^2) .- _HARVEY_C)
     gamma = coef(aux)
     return 1.0 ./ exp.(fitted(aux)), gamma, vcov(aux)
 end
 
 """
-    glejser_weights(Z, u) -> Vector{Float64}
+    quadratic_weights(Z, u) -> Vector{Float64}
 
 Compute inverse-variance weights for FWLS using Glejser's auxiliary regression.
 The standard deviation is modelled as a linear function of auxiliary regressors:
@@ -102,7 +102,7 @@ Negative or near-zero fitted values are clipped to `1e-8` to guarantee positive 
 Glejser, H. (1969). A new test for heteroskedasticity. *Journal of the
 American Statistical Association*, 64(325), 316-323.
 """
-function glejser_weights(Z, u)
+function quadratic_weights(Z, u)
     # E[|eps_i|] = sqrt(2/pi) for eps_i ~ N(0,1), so OLS of |u| on Z converges to
     # gamma * sqrt(2/pi).  Multiply by sqrt(pi/2) to obtain consistent gamma estimates.
     aux       = lm(Z, abs.(u))
@@ -110,6 +110,20 @@ function glejser_weights(Z, u)
     gamma     = coef(aux) .* c
     sigma_hat = max.(fitted(aux) .* c, 1e-8)
     return 1.0 ./ sigma_hat.^2, gamma, vcov(aux) .* (π / 2)
+end
+
+function power_weights(Z, u)
+    Z_log = hcat(Z[:, 1:1], log.(max.(abs.(Z[:, 2:end]), 1e-10)))
+    aux   = lm(Z_log, log.(u.^2) .- _HARVEY_C)
+    gamma = coef(aux)   # (log σ², 2δ₁, …) — exact, no delta method
+    return 1.0 ./ exp.(fitted(aux)), gamma, vcov(aux)
+end
+
+function linear_weights(Z, u)
+    aux    = lm(Z, u.^2)
+    gamma  = coef(aux)
+    sigma2 = max.(fitted(aux), 1e-10)
+    return 1.0 ./ sigma2, gamma, vcov(aux)
 end
 
 """
@@ -156,4 +170,18 @@ function _extract_Xy(formula::FormulaTerm, data)
     y  = vec(response(mf))
     cn = StatsModels.coefnames(mf)
     return X, y, cn, mf
+end
+
+"""
+    _extract_Z_maybe(Z, data) -> Matrix or nothing
+
+Internal helper. When `Z` is a one-sided `FormulaTerm` (e.g. `@formula(~ abs(x1) + x2)`),
+build the model matrix from `data` (intercept included automatically).
+When `Z` is a plain matrix or `nothing`, return it unchanged.
+"""
+function _extract_Z_maybe(Z, data)
+    Z isa FormulaTerm || return Z
+    ct  = Tables.columntable(data)
+    sch = schema(Z, ct)
+    return modelmatrix(apply_schema(Z, sch), ct)
 end

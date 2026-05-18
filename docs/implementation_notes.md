@@ -58,7 +58,7 @@ $$\log u_i^2 = \log\sigma_i^2 + \log\varepsilon_i^2 = \mathbf{z}_i^\top\boldsymb
 
 $\log\varepsilon_i^2$ is distributed as $\log\chi^2(1)$, which has mean
 
-$$\mathrm{E}[\log\chi^2(1)] = \psi(1/2) + \log 2 = -1.2703628454614782 \eqqcolon c$$
+$$\mathrm{E}[\log\chi^2(1)] = \psi(1/2) + \log 2 = -1.2703628454614782 =: c$$
 
 The naive OLS of $\log\hat{u}^2$ on $\mathbf{Z}$ therefore estimates
 $\boldsymbol{\gamma}$ with all coefficients biased by
@@ -86,7 +86,7 @@ Repeat Steps 2–4 until $\max|\beta^{(i)} - \beta^{(i-1)}| < \text{tol}$.  Conv
 iterated FWLS to the MLE is established under regularity conditions by
 Oberhofer & Kmenta (1974).
 
-`iterated_harvey` is the preferred FWLS choice when the iterative reweighting
+`exponential_ifwls` is the preferred FWLS choice when the iterative reweighting
 framework is explicitly desired.  For asymptotically efficient estimation,
 `exponential_mle` (Section 4) achieves the MLE directly via joint L-BFGS.
 
@@ -154,7 +154,7 @@ $\boldsymbol{\gamma}$ values and their standard errors would be wrong.
 
 Repeat Steps 2–3 until $\max|\beta^{(i)} - \beta^{(i-1)}| < \text{tol}$.
 
-`iterated_glejser` is the preferred FWLS choice when the iterative reweighting
+`quadratic_ifwls` is the preferred FWLS choice when the iterative reweighting
 framework is explicitly desired.  For asymptotically efficient estimation,
 `quadratic_mle` (Section 4) achieves the MLE directly via joint L-BFGS.
 
@@ -169,11 +169,11 @@ Statistical Association*, 64(325), 316–323.
 
 ---
 
-## 4. MLE heteroskedasticity estimators — exponential, quadratic, linear
+## 4. MLE heteroskedasticity estimators — exponential, quadratic, linear, power
 
-Three estimators share a common MLE framework, differing only in the link
-function that maps the variance equation parameters to $\sigma_i^2$.  They
-correspond to the SAS `PROC AUTOREG HETERO` link options.
+Four estimators share a common MLE framework, differing only in the link
+function that maps the variance equation parameters to $\sigma_i^2$.  Three
+correspond to the SAS `PROC AUTOREG HETERO` link options; the power link is HARE-native.
 
 ### Models
 
@@ -182,6 +182,7 @@ correspond to the SAS `PROC AUTOREG HETERO` link options.
 | `exponential_mle` | EXP | $\sigma_i^2 = \exp(\gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma})$ | Harvey (1976) | Harvey LM test |
 | `quadratic_mle` | SQUARE | $\sigma_i = \gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma}$ | Glejser (1969) | Glejser test |
 | `linear_mle` | LINEAR | $\sigma_i^2 = \gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma}$ | Breusch & Pagan (1979) | Breusch-Pagan test (`HypothesisTests.BreuschPaganTest`) |
+| `power_mle` | POWER | $\log\sigma_i^2 = \gamma_0 + \sum_j \gamma_j \log|z_{ij}|$, $\gamma_j = 2\delta_j$ | — | — |
 
 In all cases $\mathbf{z}_i$ is the user-supplied auxiliary regressor vector
 **without** a constant; $\gamma_0$ is the intercept added internally.  The
@@ -260,8 +261,9 @@ Good starting values are essential for the quadratic and linear links.
 
 | Link | Warm start |
 |---|---|
-| Exponential | Two-step Harvey FWLS: $\boldsymbol{\beta}_0$ from OLS, $\boldsymbol{\gamma}_0$ from `harvey_weights` |
-| Quadratic | Two-step Glejser FWLS: $\boldsymbol{\beta}_0$ from OLS, $\boldsymbol{\gamma}_0$ from `glejser_weights` |
+| Exponential | Two-step FWLS: $\boldsymbol{\beta}_0$ from OLS, $\boldsymbol{\gamma}_0$ from auxiliary log-linear regression of $\log\hat{u}^2 - c$ on $Z$ |
+| Quadratic | Two-step FWLS: $\boldsymbol{\beta}_0$ from OLS, $\boldsymbol{\gamma}_0$ from auxiliary regression of $|\hat{u}|$ on $Z$ (with $\sqrt{\pi/2}$ correction) |
+| Power | Two-step FWLS on $\log|Z|$: $\boldsymbol{\beta}_0$ from OLS, $\boldsymbol{\gamma}_0$ from auxiliary log-linear regression of $\log\hat{u}^2 - c$ on $[\mathbf{1}, \log|Z|]$ |
 | Linear | Constant variance: $\boldsymbol{\beta}_0$ from OLS, $\gamma_0 = \bar{u}^2$, $\boldsymbol{\gamma} = \mathbf{0}$ |
 
 The constant-variance start for the linear link is always feasible (all
@@ -320,7 +322,10 @@ The MLE first-order condition for $\sigma_g^2$ — obtained by differentiating t
 normal log-likelihood — is exactly $\hat{\sigma}_g^2 = (1/n_g)\sum_{i\in g}\hat{u}_i^2$.
 Therefore the iterated FWLS (repeating Steps 2–3 until $\boldsymbol{\beta}$ converges)
 is the EM algorithm for this model and converges to the joint MLE of
-$(\boldsymbol{\beta}, \sigma_1^2, \ldots, \sigma_G^2)$.  No separate MLE function is needed.
+$(\boldsymbol{\beta}, \sigma_1^2, \ldots, \sigma_G^2)$.  `groupwise_mle` runs
+this iteration internally and is the recommended call when the MLE is the goal;
+`iterated_groupwise` is an alias that also converges to the MLE but is named
+for the iterative FWLS framework.
 
 ### Standard errors
 
@@ -596,12 +601,19 @@ Tests $H_0\colon \boldsymbol{\gamma} = \mathbf{0}$ in the exponential variance m
 $\log\sigma_i^2 = \gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma}$.
 
 **Procedure.** OLS residuals $\hat{u}_i$ → auxiliary regression of
-$\log\hat{u}_i^2 - c$ on $\mathbf{Z}$ (same bias correction as in `harvey_weights`) →
-$\mathrm{LM} = n R^2 \sim \chi^2(p)$ under $H_0$, where $p = \dim(\boldsymbol{\gamma})$
-(slope parameters only, excluding intercept).
+$\log\hat{u}_i^2 - c$ on $\mathbf{Z}$ (same bias correction as in `exponential_fwls`) →
 
-**Equivalence to SAS.** SAS `PROC AUTOREG HETERO TEST=LM` computes the same
-statistic.
+$$\mathrm{LM} = \frac{\mathrm{ESS}}{\psi_1(1/2)} \sim \chi^2(p) \quad \text{under } H_0$$
+
+where $\mathrm{ESS}$ is the explained sum of squares of the auxiliary regression,
+$\psi_1(1/2) = \pi^2/2 \approx 4.934$ is the trigamma function at $1/2$ (i.e.\ the
+variance of $\log\chi^2(1)$), and $p = \dim(\boldsymbol{\gamma})$ (slope parameters
+only, excluding intercept).
+
+**Formula choice.** The statistic is Harvey's (1976) exact score-test formula.
+A common approximation uses $n R^2$ instead, which is asymptotically equivalent
+but numerically different.  HARE uses the exact formula, which matches
+`skedastic::harvey()` in R.
 
 ### Glejser test (`glejser_test`)
 
@@ -609,9 +621,19 @@ Tests $H_0\colon \boldsymbol{\gamma} = \mathbf{0}$ in the quadratic variance mod
 $\sigma_i = \gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma}$.
 
 **Procedure.** OLS residuals $\hat{u}_i$ → auxiliary regression of $|\hat{u}_i|$
-on $\mathbf{Z}$ → $\mathrm{LM} = n R^2 \sim \chi^2(p)$ under $H_0$.  The
-$\sqrt{\pi/2}$ correction used in estimation is scale-invariant and cancels in
-$R^2$; it does not affect the test statistic.
+on $\mathbf{Z}$ →
+
+$$\mathrm{LM} = \frac{\mathrm{ESS}_{|\hat{u}|}}{\hat{\sigma}^2 (1 - 2/\pi)} \sim \chi^2(p) \quad \text{under } H_0$$
+
+where $\mathrm{ESS}_{|\hat{u}|}$ is the explained sum of squares of the auxiliary
+regression, $\hat{\sigma}^2 = n^{-1}\sum \hat{u}_i^2$ is the OLS variance from the
+main regression, and $(1 - 2/\pi) = \mathrm{Var}(|N(0,1)|)$ is the variance of the
+half-normal.
+
+**Formula choice.** This is Glejser's (1969) exact score-test formula, matching
+`skedastic::glejser()` in R.  The generic $n R^2$ approximation omits the
+$\hat{\sigma}^2(1 - 2/\pi)$ denominator and is asymptotically equivalent but
+numerically different.
 
 ### Borrowed tests: Breusch-Pagan, White, Durbin-Watson, Breusch-Godfrey
 
@@ -652,7 +674,7 @@ at $N = 10{,}000$ (200 replications) shows:
 
 | Estimator | RMSE($\hat{\gamma}_0$) |
 |---|---|
-| `two_step_harvey` (FWLS) | 0.021 |
+| `exponential_fwls` (FWLS) | 0.021 |
 | `exponential_mle` (MLE) | 0.013 |
 
 The MLE is ~40% more efficient for $\gamma_0$.  Stata's `hetregress` in MLE mode
@@ -663,24 +685,56 @@ matches `exponential_mle`; in two-step mode it likely omits the bias correction
 
 ## 12. Standard errors: common conventions
 
-**FWLS estimators** (`two_step_harvey`, `two_step_glejser`, Prais-Winsten,
-Sequential HARE) report **conditional** standard errors — conditional on the
-estimated nuisance parameters $(\rho, \boldsymbol{\gamma})$.  This matches the standard
-econometric textbook treatment (Greene, 2018; Judge et al., 1985) and produces
-valid inference asymptotically.  Unconditional (sandwich-corrected) standard
-errors that account for two-step estimation uncertainty are not currently
-implemented.
+**FWLS estimators** (`exponential_fwls`, `exponential_ifwls`, `quadratic_fwls`,
+`quadratic_ifwls`, `power_fwls`, `power_ifwls`, Prais-Winsten, Sequential HARE)
+report **conditional** standard errors — conditional on the estimated nuisance
+parameters $(\rho, \boldsymbol{\gamma})$.  This matches the standard econometric
+textbook treatment (Greene, 2018; Judge et al., 1985) and produces valid inference
+asymptotically.  Unconditional (sandwich-corrected) standard errors that account
+for two-step estimation uncertainty are not currently implemented.
 
-**MLE estimators** (`exponential_mle`, `quadratic_mle`, `linear_mle`, Joint
-HARE, Beach-MacKinnon) report standard errors from the **inverse observed
-information matrix**, computed by ForwardDiff at the optimum.  For the three
-heteroskedastic MLE estimators the full joint Hessian over $(\boldsymbol{\beta},
+**MLE estimators** (`exponential_mle`, `quadratic_mle`, `linear_mle`, `power_mle`,
+`groupwise_mle`, Joint HARE, Beach-MacKinnon) report standard errors from the
+**inverse observed information matrix**, computed by ForwardDiff at the optimum.
+For the heteroskedastic MLE estimators the full joint Hessian over $(\boldsymbol{\beta},
 \boldsymbol{\gamma})$ is used, so the standard errors already account for the
 joint estimation of mean and variance parameters — no conditioning is needed.
 
 The inference machinery supports both a $t$-distribution (default) and a normal
 distribution for p-values and confidence intervals.  The $t$ approximation is
 recommended for small samples.
+
+---
+
+## Test design notes
+
+### Consistency testset: RNG and sample size
+
+The `consistency (large n)` testset in `test/runtests_consistency.jl` uses `StableRNG(123)`
+from the StableRNGs.jl package with `N = 1_000_000` observations and `atol =
+0.01`.  These choices were made deliberately:
+
+**Why `StableRNG` instead of `Random.seed!`.**  Julia's default RNG
+implementation is not guaranteed to produce identical streams across Julia
+versions (e.g. 1.10 vs 1.12).  `StableRNG` guarantees bit-identical draws on
+every platform and version, making the `atol` bounds platform-independent and
+eliminating spurious CI failures caused by RNG changes between releases.
+
+**Why `N = 1_000_000`.**  An earlier version used `N = 50_000` with
+`Random.seed!(2025)`.  That seed produced an AR(1) draw whose residual mean
+was large enough to push the intercept estimate 0.021 above the true value,
+exceeding `atol = 0.02` and causing four failures (`two_step_prais_winsten`,
+`two_step_cochrane_orcutt`, `hildreth_lu`, `beach_mackinnon`).  This was a
+sampling artifact, not a bias in the estimators.  At `N = 1_000_000` the
+maximum error across all estimators and all parameters is below 0.007 for
+every seed tested (StableRNG(123), StableRNG(2025), StableRNG(42),
+StableRNG(999), StableRNG(31415), and three `Random.seed!` seeds), giving
+comfortable margin under `atol = 0.01`.
+
+**Why `atol = 0.01`.**  This is a tighter and rounder bound than the previous
+0.02.  The maximum observed error at `N = 1_000_000` is ~0.006, so the margin
+is still a factor of ~1.5.  Users running the test suite with a different seed
+will see the same pass: the 1 % bound is robust at this sample size.
 
 ---
 

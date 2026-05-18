@@ -6,8 +6,8 @@ to find the global minimum over the grid (unlike iterative methods).
 """
 
 """
-    hildreth_lu(X, y; intercept=true, nrho=200) -> HildrethLuResult
-    hildreth_lu(formula, data; nrho=200) -> HildrethLuResult
+    hildreth_lu(X, y; intercept=true, nrho=200) -> AR1Result
+    hildreth_lu(formula, data; nrho=200) -> AR1Result
 
 Hildreth-Lu grid-search estimator for AR(1) errors. Evaluates the GLS
 transformation over a uniform grid of `nrho` candidate values of rho on
@@ -26,7 +26,7 @@ candidate rho (Cochrane-Orcutt convention), so the effective sample size is n-1.
 - `nrho`     : number of grid points for rho in (-0.99, 0.99) (default `200`).
 
 # Returns
-[`HildrethLuResult`](@ref). Use `stderror(result)` to obtain standard errors.
+[`AR1Result`](@ref). Use `stderror(result)` to obtain standard errors.
 
 # References
 Hildreth, C., & Lu, J. Y. (1960). Demand relations with autocorrelated
@@ -53,7 +53,7 @@ function hildreth_lu(X, y; intercept::Bool = true, nrho=200,
     end
     beta = coef(best_model)
     f    = X * beta
-    return HildrethLuResult(beta, coefnames, mf, vcov(best_model), y .- f, f, best_rho, best_rss, nrho, true)
+    return AR1Result(beta, coefnames, mf, vcov(best_model), y .- f, f, best_rho, NaN, best_rss, nrho, true, :hildreth_lu)
 end
 
 function hildreth_lu(formula::FormulaTerm, data; kwargs...)

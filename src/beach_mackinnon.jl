@@ -6,8 +6,8 @@ including the Jacobian term from the transformation.
 """
 
 """
-    beach_mackinnon(X, y; intercept=true, tol=1e-10) -> BeachMacKinnonResult
-    beach_mackinnon(formula, data; tol=1e-10) -> BeachMacKinnonResult
+    beach_mackinnon(X, y; intercept=true, tol=1e-10) -> AR1Result
+    beach_mackinnon(formula, data; tol=1e-10) -> AR1Result
 
 Beach-MacKinnon exact maximum likelihood estimator for the linear regression
 model with AR(1) errors. Maximises the exact concentrated log-likelihood
@@ -29,7 +29,7 @@ conditional on rho_hat.
 - `tol`      : absolute tolerance for Brent's method (default `1e-10`).
 
 # Returns
-[`BeachMacKinnonResult`](@ref). Use `stderror(result)` to obtain standard errors.
+[`AR1Result`](@ref). Use `stderror(result)` to obtain standard errors.
 
 # References
 Beach, C. M., & MacKinnon, J. G. (1978). A maximum likelihood procedure for
@@ -53,7 +53,7 @@ function beach_mackinnon(X, y; intercept::Bool = true, tol=1e-10,
     model        = lm(Xstar, ystar)
     beta         = coef(model)
     f            = X * beta
-    return BeachMacKinnonResult(beta, coefnames, mf, vcov(model), y .- f, f, rho_hat, -Optim.minimum(result), Optim.converged(result))
+    return AR1Result(beta, coefnames, mf, vcov(model), y .- f, f, rho_hat, -Optim.minimum(result), NaN, 0, Optim.converged(result), :beach_mackinnon)
 end
 
 function beach_mackinnon(formula::FormulaTerm, data; kwargs...)

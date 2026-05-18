@@ -50,7 +50,7 @@ function two_step_sequential(X, y; intercept::Bool = true, Z=nothing,
     rho                  = estimate_rho(residuals(lm(X, y)))
     ystar, Xstar         = pw_transform(X, y, rho)
     u_pw                 = residuals(lm(Xstar, ystar))
-    w, gamma, gamma_vcov = harvey_weights(Z_full, u_pw)
+    w, gamma, gamma_vcov = exponential_weights(Z_full, u_pw)
     model                = lm(Xstar, ystar, weights = w)
     beta                 = coef(model)
     f                    = X * beta
@@ -59,7 +59,7 @@ end
 
 function two_step_sequential(formula::FormulaTerm, data; Z=nothing, kwargs...)
     X, y, cn, mf = _extract_Xy(formula, data)
-    return two_step_sequential(X, y; intercept=false, Z=Z, coefnames=cn, mf=mf, kwargs...)
+    return two_step_sequential(X, y; intercept=false, Z=_extract_Z_maybe(Z, data), coefnames=cn, mf=mf, kwargs...)
 end
 
 """
@@ -109,7 +109,7 @@ function iterated_sequential(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, 
         rho_old              = rho
         ystar, Xstar         = pw_transform(X, y, rho)
         u_pw                 = residuals(lm(Xstar, ystar))
-        w, gamma, gamma_vcov = harvey_weights(Z_full, u_pw)
+        w, gamma, gamma_vcov = exponential_weights(Z_full, u_pw)
         model                = lm(Xstar, ystar, weights = w)
         rho                  = estimate_rho(y .- X * coef(model))
         if max(maximum(abs.(coef(model) .- beta_old)), abs(rho - rho_old)) < tol
@@ -125,5 +125,5 @@ end
 
 function iterated_sequential(formula::FormulaTerm, data; Z=nothing, kwargs...)
     X, y, cn, mf = _extract_Xy(formula, data)
-    return iterated_sequential(X, y; intercept=false, Z=Z, coefnames=cn, mf=mf, kwargs...)
+    return iterated_sequential(X, y; intercept=false, Z=_extract_Z_maybe(Z, data), coefnames=cn, mf=mf, kwargs...)
 end

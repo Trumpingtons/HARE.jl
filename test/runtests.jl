@@ -1,7 +1,6 @@
 using Test
 using HARE
 using Random
-using StableRNGs
 using LinearAlgebra
 using StatsBase
 using StatsModels
@@ -26,6 +25,10 @@ data_het  = (y = y_het, x1 = x1, x2 = x2)
 sigma_lin  = 0.5 .+ 0.3 .* abs.(x1)
 y_glej     = hcat(ones(n), X) * b_true .+ sigma_lin .* randn(n)
 data_glej  = (y = y_glej, x1 = x1, x2 = x2)
+
+sigma_pow  = abs.(x1) .^ 0.5   # σ²_i = |x1|^{2*0.5} = |x1|
+y_pow      = hcat(ones(n), X) * b_true .+ sigma_pow .* randn(n)
+data_pow   = (y = y_pow, x1 = x1, x2 = x2)
 
 eps_t  = randn(n)
 u_ar   = zeros(n)
@@ -92,9 +95,9 @@ function check_interface(m, y, n, k; check_r2_bounds=true)
     @test adjr2(m)  ≈ 1 - (1 - r2(m)) * (nobs(m) - 1) / dof_residual(m)
 end
 
-@testset "two_step_harvey" begin
-    m = two_step_harvey(X, y_het)
-    @test m isa HarveyResult
+@testset "exponential_fwls" begin
+    m = exponential_fwls(X, y_het)
+    @test m isa FWLSResult && m.link === :exponential
     check_interface(m, y_het, n, k)
     @test m.iterations == 1
     @test m.converged  == true
@@ -103,32 +106,31 @@ end
     @test all(diag(m.gamma_vcov) .> 0)
     @test m.gamma_vcov           ≈ m.gamma_vcov'
 
-    m2 = two_step_harvey(@formula(y ~ x1 + x2), data_het)
+    m2 = exponential_fwls(@formula(y ~ x1 + x2), data_het)
     @test coef(m)       ≈ coef(m2)
     @test m.gamma       ≈ m2.gamma
     @test m.gamma_vcov  ≈ m2.gamma_vcov
 
-    # Z = augmented X explicitly → identical to default
-    X_full = hcat(ones(n), X)
-    mZ_eq = two_step_harvey(X, y_het; Z = X_full)
+    # Z = X explicitly → identical to default
+    mZ_eq = exponential_fwls(X, y_het; Z = X)
     @test coef(mZ_eq)      ≈ coef(m)
     @test mZ_eq.gamma      ≈ m.gamma
     @test mZ_eq.gamma_vcov ≈ m.gamma_vcov
 
-    # Z ≠ X: two-column auxiliary [1, |x1|] — different DGP for the variance equation
-    Z_alt = hcat(ones(n), abs.(x1))
+    # Z ≠ X: one-column auxiliary [|x1|] without constant (prepended internally)
+    Z_alt = hcat(abs.(x1))
     p_alt = 2
-    mZ = two_step_harvey(X, y_het; Z = Z_alt)
-    @test mZ isa HarveyResult
-    @test length(coef(mZ))      == k       # mean equation unchanged
+    mZ = exponential_fwls(X, y_het; Z = Z_alt)
+    @test mZ isa FWLSResult && mZ.link === :exponential
+    @test length(coef(mZ))      == k
     @test length(mZ.gamma)      == p_alt
     @test size(mZ.gamma_vcov)   == (p_alt, p_alt)
     @test all(diag(mZ.gamma_vcov) .> 0)
 end
 
-@testset "iterated_harvey" begin
-    m = iterated_harvey(X, y_het)
-    @test m isa HarveyResult
+@testset "exponential_ifwls" begin
+    m = exponential_ifwls(X, y_het)
+    @test m isa FWLSResult && m.link === :exponential
     check_interface(m, y_het, n, k)
     @test m.iterations >= 1
     @test m.converged
@@ -136,30 +138,29 @@ end
     @test size(m.gamma_vcov)     == (k, k)
     @test all(diag(m.gamma_vcov) .> 0)
 
-    m2 = iterated_harvey(@formula(y ~ x1 + x2), data_het)
+    m2 = exponential_ifwls(@formula(y ~ x1 + x2), data_het)
     @test coef(m)  ≈ coef(m2)
     @test m.gamma  ≈ m2.gamma
 
-    # Z = augmented X explicitly → identical to default
-    X_full = hcat(ones(n), X)
-    mZ_eq = iterated_harvey(X, y_het; Z = X_full)
+    # Z = X explicitly → identical to default
+    mZ_eq = exponential_ifwls(X, y_het; Z = X)
     @test coef(mZ_eq) ≈ coef(m)
     @test mZ_eq.gamma ≈ m.gamma
 
-    # Z ≠ X: two-column auxiliary [1, |x1|]
-    Z_alt = hcat(ones(n), abs.(x1))
+    # Z ≠ X: one-column auxiliary [|x1|] without constant (prepended internally)
+    Z_alt = hcat(abs.(x1))
     p_alt = 2
-    mZ = iterated_harvey(X, y_het; Z = Z_alt)
-    @test mZ isa HarveyResult
+    mZ = exponential_ifwls(X, y_het; Z = Z_alt)
+    @test mZ isa FWLSResult && mZ.link === :exponential
     @test length(coef(mZ))    == k
     @test length(mZ.gamma)    == p_alt
     @test size(mZ.gamma_vcov) == (p_alt, p_alt)
     @test mZ.converged
 end
 
-@testset "two_step_glejser" begin
-    m = two_step_glejser(X, y_glej)
-    @test m isa GlejserResult
+@testset "quadratic_fwls" begin
+    m = quadratic_fwls(X, y_glej)
+    @test m isa FWLSResult && m.link === :quadratic
     check_interface(m, y_glej, n, k)
     @test m.iterations == 1
     @test m.converged  == true
@@ -168,24 +169,24 @@ end
     @test all(diag(m.gamma_vcov) .> 0)
     @test m.gamma_vcov           ≈ m.gamma_vcov'
 
-    m2 = two_step_glejser(@formula(y ~ x1 + x2), data_glej)
+    m2 = quadratic_fwls(@formula(y ~ x1 + x2), data_glej)
     @test coef(m)       ≈ coef(m2)
     @test m.gamma       ≈ m2.gamma
     @test m.gamma_vcov  ≈ m2.gamma_vcov
 
-    # separate auxiliary regressors Z (must include constant)
-    Z = hcat(ones(n), abs.(x1))
-    mz = two_step_glejser(X, y_glej; Z=Z)
-    @test mz isa GlejserResult
+    # separate auxiliary regressors Z without constant (prepended internally)
+    Z = hcat(abs.(x1))
+    mz = quadratic_fwls(X, y_glej; Z=Z)
+    @test mz isa FWLSResult && mz.link === :quadratic
     check_interface(mz, y_glej, n, k)
     @test length(mz.gamma)        == 2
     @test size(mz.gamma_vcov)     == (2, 2)
     @test all(diag(mz.gamma_vcov) .> 0)
 end
 
-@testset "iterated_glejser" begin
-    m = iterated_glejser(X, y_glej)
-    @test m isa GlejserResult
+@testset "quadratic_ifwls" begin
+    m = quadratic_ifwls(X, y_glej)
+    @test m isa FWLSResult && m.link === :quadratic
     check_interface(m, y_glej, n, k)
     @test m.iterations >= 1
     @test m.converged
@@ -193,23 +194,82 @@ end
     @test size(m.gamma_vcov)     == (k, k)
     @test all(diag(m.gamma_vcov) .> 0)
 
-    m2 = iterated_glejser(@formula(y ~ x1 + x2), data_glej)
+    m2 = quadratic_ifwls(@formula(y ~ x1 + x2), data_glej)
     @test coef(m)  ≈ coef(m2)
     @test m.gamma  ≈ m2.gamma
 
-    # separate auxiliary regressors Z (must include constant)
-    Z = hcat(ones(n), abs.(x1))
-    mz = iterated_glejser(X, y_glej; Z=Z)
-    @test mz isa GlejserResult
+    # separate auxiliary regressors Z without constant (prepended internally)
+    Z = hcat(abs.(x1))
+    mz = quadratic_ifwls(X, y_glej; Z=Z)
+    @test mz isa FWLSResult && mz.link === :quadratic
     check_interface(mz, y_glej, n, k)
     @test length(mz.gamma)        == 2
     @test size(mz.gamma_vcov)     == (2, 2)
     @test all(diag(mz.gamma_vcov) .> 0)
 end
 
+@testset "power_fwls" begin
+    Z_pow = hcat(abs.(x1))
+    m = power_fwls(X, y_pow; Z = Z_pow)
+    @test m isa FWLSResult && m.link === :power
+    check_interface(m, y_pow, n, k)
+    @test m.iterations == 1
+    @test m.converged  == true
+    # gamma = [log σ², 2δ₁]: length = 2 (intercept + one Z column)
+    @test length(m.gamma)    == 2
+    @test size(m.gamma_vcov) == (2, 2)
+    @test all(diag(m.gamma_vcov) .> 0)
+    @test m.gamma_vcov ≈ m.gamma_vcov'
+
+    m2 = power_fwls(@formula(y ~ x1 + x2), data_pow; Z = @formula(0 ~ abs(x1)))
+    @test coef(m)      ≈ coef(m2)
+    @test m.gamma      ≈ m2.gamma
+    @test m.gamma_vcov ≈ m2.gamma_vcov
+
+    # show does not error
+    buf = IOBuffer(); show(buf, m); @test length(take!(buf)) > 0
+end
+
+@testset "power_ifwls" begin
+    Z_pow = hcat(abs.(x1))
+    m = power_ifwls(X, y_pow; Z = Z_pow)
+    @test m isa FWLSResult && m.link === :power
+    check_interface(m, y_pow, n, k)
+    @test m.iterations >= 1
+    @test m.converged
+
+    m2 = power_ifwls(@formula(y ~ x1 + x2), data_pow; Z = @formula(0 ~ abs(x1)))
+    @test coef(m) ≈ coef(m2)
+    @test m.gamma ≈ m2.gamma
+end
+
+@testset "power_mle" begin
+    Z_pow = hcat(abs.(x1))
+    m = power_mle(X, y_pow; Z = Z_pow)
+    @test m isa MLEResult && m.link === :power
+    check_interface(m, y_pow, n, k)
+    @test m.converged
+    @test isfinite(m.loglik)
+    @test length(m.gamma)    == 2
+    @test size(m.gamma_vcov) == (2, 2)
+    @test all(diag(m.gamma_vcov) .> 0)
+    @test isfinite(m.gamma[1])   # log σ² is any real
+
+    m2 = power_mle(@formula(y ~ x1 + x2), data_pow; Z = @formula(0 ~ abs(x1)))
+    @test coef(m) ≈ coef(m2)
+    @test m.gamma ≈ m2.gamma
+
+    # FWLS and MLE should give similar coefficients
+    mf = power_fwls(X, y_pow; Z = Z_pow)
+    @test coef(m) ≈ coef(mf) atol=0.3
+
+    # show does not error
+    buf = IOBuffer(); show(buf, m); @test length(take!(buf)) > 0
+end
+
 @testset "two_step_prais_winsten" begin
     m = two_step_prais_winsten(X, y_ar)
-    @test m isa PraisWinstenResult
+    @test m isa AR1Result && m.method === :prais_winsten
     check_interface(m, y_ar, n, k)
     @test -1 < m.rho < 1
     @test m.iterations == 1
@@ -222,7 +282,7 @@ end
 
 @testset "iterated_prais_winsten" begin
     m = iterated_prais_winsten(X, y_ar)
-    @test m isa PraisWinstenResult
+    @test m isa AR1Result && m.method === :prais_winsten
     check_interface(m, y_ar, n, k)
     @test -1 < m.rho < 1
     @test m.converged
@@ -234,7 +294,7 @@ end
 
 @testset "two_step_cochrane_orcutt" begin
     m = two_step_cochrane_orcutt(X, y_ar)
-    @test m isa CochranOrcuttResult
+    @test m isa AR1Result && m.method === :cochrane_orcutt
     @test length(coef(m))      == k
     @test size(vcov(m))        == (k, k)
     @test length(stderror(m))  == k
@@ -260,7 +320,7 @@ end
 
 @testset "iterated_cochrane_orcutt" begin
     m = iterated_cochrane_orcutt(X, y_ar)
-    @test m isa CochranOrcuttResult
+    @test m isa AR1Result && m.method === :cochrane_orcutt
     @test length(coef(m))      == k
     @test size(vcov(m))        == (k, k)
     @test length(stderror(m))  == k
@@ -282,7 +342,7 @@ end
 
 @testset "hildreth_lu" begin
     m = hildreth_lu(X, y_ar)
-    @test m isa HildrethLuResult
+    @test m isa AR1Result && m.method === :hildreth_lu
     check_interface(m, y_ar, n, k)
     @test -1 < m.rho < 1
     @test m.rss > 0
@@ -427,7 +487,7 @@ end
 
 @testset "beach_mackinnon" begin
     m = beach_mackinnon(X, y_ar)
-    @test m isa BeachMacKinnonResult
+    @test m isa AR1Result && m.method === :beach_mackinnon
     check_interface(m, y_ar, n, k)
     @test -1 < m.rho < 1
     @test isfinite(m.loglik)
@@ -443,7 +503,7 @@ end
 
 @testset "exponential_mle" begin
     m = exponential_mle(X, y_het)
-    @test m isa HeteroMLEResult
+    @test m isa MLEResult
     @test m.link === :exponential
     check_interface(m, y_het, n, k)
     @test m.converged
@@ -460,7 +520,7 @@ end
     # Z ≠ X: two-column auxiliary [1, |x1|]
     Z_alt = hcat(abs.(x1),)   # no constant — added internally
     mZ = exponential_mle(X, y_het; Z = Z_alt)
-    @test mZ isa HeteroMLEResult
+    @test mZ isa MLEResult
     @test length(mZ.gamma)    == 2
     @test size(mZ.gamma_vcov) == (2, 2)
     @test length(coef(mZ))    == k
@@ -472,7 +532,7 @@ end
 
 @testset "quadratic_mle" begin
     m = quadratic_mle(X, y_glej)
-    @test m isa HeteroMLEResult
+    @test m isa MLEResult
     @test m.link === :quadratic
     check_interface(m, y_glej, n, k)
     @test m.converged
@@ -488,7 +548,7 @@ end
 
     Z_alt = hcat(abs.(x1),)
     mZ = quadratic_mle(X, y_glej; Z = Z_alt)
-    @test mZ isa HeteroMLEResult
+    @test mZ isa MLEResult
     @test length(mZ.gamma)    == 2
     @test length(coef(mZ))    == k
     @test mZ.converged
@@ -496,7 +556,7 @@ end
 
 @testset "linear_mle" begin
     m = linear_mle(X, y_het)
-    @test m isa HeteroMLEResult
+    @test m isa MLEResult
     @test m.link === :linear
     check_interface(m, y_het, n, k)
     @test m.converged
@@ -512,7 +572,7 @@ end
 
     Z_alt = hcat(abs.(x1),)
     mZ = linear_mle(X, y_het; Z = Z_alt)
-    @test mZ isa HeteroMLEResult
+    @test mZ isa MLEResult
     @test length(mZ.gamma)    == 2
     @test length(coef(mZ))    == k
     @test mZ.converged
@@ -567,9 +627,34 @@ end
     @test coef(m) ≈ coef(m3)  atol=1e-8
 end
 
+@testset "groupwise_mle" begin
+    groups = repeat(["A", "B", "C", "D"], inner = n ÷ 4)
+    mle = groupwise_mle(X, y_het, groups)
+    fwls = iterated_groupwise(X, y_het, groups)
+
+    @test mle isa GroupwiseResult
+    check_interface(mle, y_het, n, k)
+    @test mle.converged
+    @test all(mle.sigma2 .> 0)
+
+    # point estimates match iterated_groupwise
+    @test coef(mle) ≈ coef(fwls)  atol=1e-6
+    @test mle.sigma2 ≈ fwls.sigma2  atol=1e-6
+    @test loglikelihood(mle) ≈ loglikelihood(fwls)  atol=1e-6
+
+    # SEs differ: MLE uses (X'WX)^{-1}, FWLS uses GLM dispersion-scaled vcov
+    @test stderror(mle) ≉ stderror(fwls)
+
+    # formula dispatch
+    data_g = (y = y_het, x1 = x1, x2 = x2)
+    mle2 = groupwise_mle(@formula(y ~ x1 + x2), data_g, groups)
+    @test coef(mle) ≈ coef(mle2)  atol=1e-8
+end
+
 @testset "two-step vs iterated consistency" begin
-    @test coef(two_step_glejser(X, y_glej))             ≈ coef(iterated_glejser(X, y_glej))        atol=0.05
-    @test coef(two_step_harvey(X, y_het))               ≈ coef(iterated_harvey(X, y_het))          atol=0.05
+    @test coef(quadratic_fwls(X, y_glej))             ≈ coef(quadratic_ifwls(X, y_glej))        atol=0.05
+    @test coef(exponential_fwls(X, y_het))               ≈ coef(exponential_ifwls(X, y_het))          atol=0.05
+    @test coef(power_fwls(X, y_pow; Z=hcat(abs.(x1)))) ≈ coef(power_ifwls(X, y_pow; Z=hcat(abs.(x1)))) atol=0.05
     @test coef(two_step_prais_winsten(X, y_ar))         ≈ coef(iterated_prais_winsten(X, y_ar))         atol=0.05
     @test coef(two_step_cochrane_orcutt(X, y_ar))       ≈ coef(iterated_cochrane_orcutt(X, y_ar))       atol=0.05
     @test coef(two_step_sequential(X, y_hae))           ≈ coef(iterated_sequential(X, y_hae))           atol=0.05
@@ -578,10 +663,10 @@ end
 
 @testset "formula metadata and predict(newdata)" begin
     estimators = [
-        ("two_step_glejser",            (f, d) -> two_step_glejser(f, d)),
-        # ("iterated_glejser",          (f, d) -> iterated_glejser(f, d)),
-        ("two_step_harvey",             (f, d) -> two_step_harvey(f, d)),
-        # ("iterated_harvey",           (f, d) -> iterated_harvey(f, d)),
+        ("quadratic_fwls",            (f, d) -> quadratic_fwls(f, d)),
+        # ("quadratic_ifwls",          (f, d) -> quadratic_ifwls(f, d)),
+        ("exponential_fwls",             (f, d) -> exponential_fwls(f, d)),
+        # ("exponential_ifwls",           (f, d) -> exponential_ifwls(f, d)),
         ("two_step_prais_winsten",      (f, d) -> two_step_prais_winsten(f, d)),
         ("iterated_prais_winsten",      (f, d) -> iterated_prais_winsten(f, d)),
         ("two_step_cochrane_orcutt",    (f, d) -> two_step_cochrane_orcutt(f, d)),
@@ -707,8 +792,8 @@ end
     @test_throws DimensionMismatch wald_test(m, R, zeros(3))
 
     # works for all HAREModel subtypes
-    for mfit in [two_step_glejser(X, y_glej),
-                 two_step_harvey(X, y_het),
+    for mfit in [quadratic_fwls(X, y_glej),
+                 exponential_fwls(X, y_het),
                  two_step_prais_winsten(X, y_ar),
                  two_step_cochrane_orcutt(X, y_ar),
                  hildreth_lu(X, y_ar),
@@ -751,89 +836,3 @@ end
     @test all(widths_t .>= widths_n)   # t intervals are wider
 end
 
-# ── Consistency checks ────────────────────────────────────────────────────────
-# The testsets above verify the API contract (types, dimensions, interface).
-# The tests below verify *statistical* correctness: with a large sample every
-# estimator must recover its true population parameters to within sampling noise.
-# A failure here indicates a genuine bias or implementation error — not a wrong
-# array dimension.  StableRNG is used instead of the default Julia RNG to
-# guarantee identical random streams across Julia versions (1.10, 1.12, …),
-# making atol values platform- and version-independent.
-
-@testset "consistency (large n)" begin
-    rng = StableRNG(123)
-    N   = 100_000
-    x1L = randn(rng, N);  x2L = randn(rng, N)
-    XL  = hcat(x1L, x2L)
-    XfL = hcat(ones(N), XL)
-    epsL = randn(rng, N)
-
-    # Harvey: log(σ²) = 0·1 + 1·x1 + 0·x2
-    gamma_h = [0.0, 1.0, 0.0]
-    sigL_h  = exp.(0.5 .* (XfL * gamma_h))
-    yL_h    = XfL * b_true .+ sigL_h .* randn(rng, N)
-    mh = two_step_harvey(XL, yL_h)
-    @test coef(mh)  ≈ b_true  atol=0.02
-    @test mh.gamma  ≈ gamma_h atol=0.02
-
-    # Glejser: σ = 0.5 + 0.3·|x1|  (correctly specified Z supplied)
-    gamma_g = [0.5, 0.3]
-    sigL_g  = 0.5 .+ 0.3 .* abs.(x1L)
-    yL_g    = XfL * b_true .+ sigL_g .* randn(rng, N)
-    ZL_g    = hcat(ones(N), abs.(x1L))
-    mg = two_step_glejser(XL, yL_g; Z = ZL_g)
-    @test coef(mg)  ≈ b_true  atol=0.02
-    @test mg.gamma  ≈ gamma_g atol=0.02
-
-    # AR(1): ρ = 0.7
-    uL_ar = zeros(N)
-    for t in 2:N; uL_ar[t] = 0.7 * uL_ar[t-1] + epsL[t]; end
-    yL_ar = XfL * b_true .+ uL_ar
-
-    mpw = two_step_prais_winsten(XL, yL_ar)
-    @test coef(mpw) ≈ b_true  atol=0.02
-    @test mpw.rho   ≈ 0.7     atol=0.02
-
-    mco = two_step_cochrane_orcutt(XL, yL_ar)
-    @test coef(mco) ≈ b_true  atol=0.02
-    @test mco.rho   ≈ 0.7     atol=0.02
-
-    mhl = hildreth_lu(XL, yL_ar)
-    @test coef(mhl) ≈ b_true  atol=0.02
-    @test mhl.rho   ≈ 0.7     atol=0.02
-
-    mbm = beach_mackinnon(XL, yL_ar)
-    @test coef(mbm) ≈ b_true  atol=0.02
-    @test mbm.rho   ≈ 0.7     atol=0.02
-
-    # Combined AR(1) + Harvey heteroskedasticity: ρ = 0.7, γ = [0, 1, 0]
-    uL_hae = zeros(N)
-    for t in 2:N; uL_hae[t] = 0.7 * uL_hae[t-1] + sigL_h[t] * epsL[t]; end
-    yL_hae = XfL * b_true .+ uL_hae
-
-    ms = two_step_sequential(XL, yL_hae)
-    @test coef(ms) ≈ b_true  atol=0.02
-    @test ms.rho   ≈ 0.7     atol=0.02
-    @test ms.gamma ≈ gamma_h atol=0.02
-
-    mj = two_step_joint(XL, yL_hae)
-    @test coef(mj) ≈ b_true  atol=0.02
-    @test mj.rho   ≈ 0.7     atol=0.02
-    @test mj.gamma ≈ gamma_h atol=0.02
-
-    # Groupwise: 4 groups each with a known variance
-    # σ²_g = [1.0, 2.0, 3.0, 4.0]
-    sigma2_true = [1.0, 2.0, 3.0, 4.0]
-    groupsL = repeat([1, 2, 3, 4], inner = N ÷ 4)
-    sigL_gw = [sqrt(sigma2_true[groupsL[i]]) for i in 1:N]
-    yL_gw   = XfL * b_true .+ sigL_gw .* randn(rng, N)
-
-    mgw2 = two_step_groupwise(XL, yL_gw, groupsL)
-    @test coef(mgw2)  ≈ b_true      atol=0.02
-    @test mgw2.sigma2 ≈ sigma2_true rtol=0.05   # ~4 SE for each group
-
-    mgwi = iterated_groupwise(XL, yL_gw, groupsL)
-    @test coef(mgwi)  ≈ b_true      atol=0.02
-    @test mgwi.sigma2 ≈ sigma2_true rtol=0.05   # ~4 SE for each group
-    @test loglikelihood(mgwi) >= loglikelihood(mgw2) - 1e-6
-end

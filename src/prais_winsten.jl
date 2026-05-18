@@ -6,8 +6,8 @@ the first observation via scaling, unlike Cochrane-Orcutt.
 """
 
 """
-    two_step_prais_winsten(X, y; intercept=true) -> PraisWinstenResult
-    two_step_prais_winsten(formula, data) -> PraisWinstenResult
+    two_step_prais_winsten(X, y; intercept=true) -> AR1Result
+    two_step_prais_winsten(formula, data) -> AR1Result
 
 Two-step Prais-Winsten GLS estimator correcting for AR(1) autocorrelation.
 
@@ -24,7 +24,7 @@ observation) and fit OLS on the transformed system.
 - `data`     : Tables.jl-compatible data source (formula method).
 
 # Returns
-[`PraisWinstenResult`](@ref). Use `stderror(result)` to obtain standard errors.
+[`AR1Result`](@ref). Use `stderror(result)` to obtain standard errors.
 
 # Examples
 ```jldoctest
@@ -56,7 +56,7 @@ function two_step_prais_winsten(X, y; intercept::Bool = true,
     model          = lm(Xstar, ystar)
     beta           = coef(model)
     f              = X * beta
-    return PraisWinstenResult(beta, coefnames, mf, vcov(model), y .- f, f, rho, 1, true)
+    return AR1Result(beta, coefnames, mf, vcov(model), y .- f, f, rho, NaN, NaN, 1, true, :prais_winsten)
 end
 
 function two_step_prais_winsten(formula::FormulaTerm, data; kwargs...)
@@ -65,8 +65,8 @@ function two_step_prais_winsten(formula::FormulaTerm, data; kwargs...)
 end
 
 """
-    iterated_prais_winsten(X, y; intercept=true, tol=1e-8, maxiter=100) -> PraisWinstenResult
-    iterated_prais_winsten(formula, data; tol=1e-8, maxiter=100) -> PraisWinstenResult
+    iterated_prais_winsten(X, y; intercept=true, tol=1e-8, maxiter=100) -> AR1Result
+    iterated_prais_winsten(formula, data; tol=1e-8, maxiter=100) -> AR1Result
 
 Iterated Prais-Winsten (Cochrane-Orcutt) GLS estimator for AR(1) errors.
 Alternates between estimating rho and re-fitting by Prais-Winsten GLS until
@@ -83,7 +83,7 @@ Alternates between estimating rho and re-fitting by Prais-Winsten GLS until
 - `maxiter`  : maximum number of iterations (default `100`).
 
 # Returns
-[`PraisWinstenResult`](@ref). Use `stderror(result)` to obtain standard errors.
+[`AR1Result`](@ref). Use `stderror(result)` to obtain standard errors.
 
 # References
 Prais, S. J., & Winsten, C. B. (1954). Trend estimators and serial
@@ -107,12 +107,12 @@ function iterated_prais_winsten(X, y; intercept::Bool = true, tol=1e-8, maxiter=
         if abs(rho - rho_old) < tol
             beta = coef(model)
             f    = X * beta
-            return PraisWinstenResult(beta, coefnames, mf, vcov(model), y .- f, f, rho, i, true)
+            return AR1Result(beta, coefnames, mf, vcov(model), y .- f, f, rho, NaN, NaN, i, true, :prais_winsten)
         end
     end
     beta = coef(model)
     f    = X * beta
-    return PraisWinstenResult(beta, coefnames, mf, vcov(model), y .- f, f, rho, maxiter, false)
+    return AR1Result(beta, coefnames, mf, vcov(model), y .- f, f, rho, NaN, NaN, maxiter, false, :prais_winsten)
 end
 
 function iterated_prais_winsten(formula::FormulaTerm, data; kwargs...)
