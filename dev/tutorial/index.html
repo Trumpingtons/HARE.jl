@@ -1,192 +1,473 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial · HARE.jl</title><meta name="title" content="Tutorial · HARE.jl"/><meta property="og:title" content="Tutorial · HARE.jl"/><meta property="twitter:title" content="Tutorial · HARE.jl"/><meta name="description" content="Documentation for HARE.jl."/><meta property="og:description" content="Documentation for HARE.jl."/><meta property="twitter:description" content="Documentation for HARE.jl."/><meta property="og:url" content="https://Trumpingtons.github.io/HARE.jl/tutorial/"/><meta property="twitter:url" content="https://Trumpingtons.github.io/HARE.jl/tutorial/"/><link rel="canonical" href="https://Trumpingtons.github.io/HARE.jl/tutorial/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">HARE.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Tutorial</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Harvey-Estimator"><span>Harvey Estimator</span></a></li><li><a class="tocitem" href="#Glejser-Estimator"><span>Glejser Estimator</span></a></li><li><a class="tocitem" href="#AR(1)-Estimators"><span>AR(1) Estimators</span></a></li><li><a class="tocitem" href="#Combined-AR(1)-Heteroskedasticity"><span>Combined AR(1) + Heteroskedasticity</span></a></li></ul></li><li><a class="tocitem" href="../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Tutorial</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Trumpingtons/HARE.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Trumpingtons/HARE.jl/blob/main/examples/demo.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="HARE.jl-–-Tutorial"><a class="docs-heading-anchor" href="#HARE.jl-–-Tutorial">HARE.jl – Tutorial</a><a id="HARE.jl-–-Tutorial-1"></a><a class="docs-heading-anchor-permalink" href="#HARE.jl-–-Tutorial" title="Permalink"></a></h1><p>This tutorial demonstrates all estimators in HARE.jl. Each section simulates data appropriate for that estimator.</p><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><pre><code class="language-julia hljs">using HARE
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial · HARE.jl</title><meta name="title" content="Tutorial · HARE.jl"/><meta property="og:title" content="Tutorial · HARE.jl"/><meta property="twitter:title" content="Tutorial · HARE.jl"/><meta name="description" content="Documentation for HARE.jl."/><meta property="og:description" content="Documentation for HARE.jl."/><meta property="twitter:description" content="Documentation for HARE.jl."/><meta property="og:url" content="https://Trumpingtons.github.io/HARE.jl/tutorial/"/><meta property="twitter:url" content="https://Trumpingtons.github.io/HARE.jl/tutorial/"/><link rel="canonical" href="https://Trumpingtons.github.io/HARE.jl/tutorial/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">HARE.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Tutorial</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Exponential-Variance-Model:"><span>Exponential Variance Model:</span></a></li><li><a class="tocitem" href="#Power-Variance-Model"><span>Power Variance Model</span></a></li><li><a class="tocitem" href="#Quadratic-Variance-Model"><span>Quadratic Variance Model</span></a></li><li><a class="tocitem" href="#Linear-Variance-Model"><span>Linear Variance Model</span></a></li><li><a class="tocitem" href="#Groupwise-Heteroskedasticity"><span>Groupwise Heteroskedasticity</span></a></li><li><a class="tocitem" href="#AR(1)-Estimators"><span>AR(1) Estimators</span></a></li><li><a class="tocitem" href="#R-Cross-Validation"><span>R Cross-Validation</span></a></li><li><a class="tocitem" href="#Consistency:-Exponential-MLE"><span>Consistency: Exponential MLE</span></a></li><li><a class="tocitem" href="#Combined-AR(1)-Heteroskedasticity"><span>Combined AR(1) + Heteroskedasticity</span></a></li><li><a class="tocitem" href="#Heteroskedasticity-Tests"><span>Heteroskedasticity Tests</span></a></li></ul></li><li><a class="tocitem" href="../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Tutorial</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Trumpingtons/HARE.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Trumpingtons/HARE.jl/blob/main/examples/demo.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="HARE.jl-–-Tutorial"><a class="docs-heading-anchor" href="#HARE.jl-–-Tutorial">HARE.jl – Tutorial</a><a id="HARE.jl-–-Tutorial-1"></a><a class="docs-heading-anchor-permalink" href="#HARE.jl-–-Tutorial" title="Permalink"></a></h1><p>This tutorial demonstrates estimators in HARE.jl using the formula interface. Every function also accepts a matrix interface <code>f(X, y; ...)</code> where <code>X</code> is the regressor matrix <strong>without</strong> a constant column; both signatures are shown for the first estimator and listed for all estimators in the <a href="../api/">API Reference</a>. Each section simulates data appropriate for that estimator.</p><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><p class="math-container">\[\begin{aligned}
+y_i &amp;= \mathbf{x}_i^\top \boldsymbol{\beta} + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0,\,\sigma_i^2)
+\end{aligned}\]</p><p>For this tutorial, as exogenous variables we generate two sets of random samples (<span>$\mathbf{x}_{1}$</span>) and (<span>$\mathbf{x}_{2}$</span>), normally distributed. The response variable (<span>$y$</span>) is given by</p><p class="math-container">\[\begin{aligned}
+y_i &amp;= \beta_0+\beta_{1}\, \mathbf{x}_{1i} + \beta_{2}\, \mathbf{x}_{2i} + \varepsilon_i
+\end{aligned}\]</p><pre><code class="language-julia hljs">using HARE
 using Random, LinearAlgebra, GLM, StatsBase
 
 Random.seed!(1234)
 
-n      = 100_000
-x1     = randn(n)
-x2     = randn(n)
-X      = hcat(x1, x2)
-X_full = hcat(ones(n), X)
-b_true = [1.0, 2.0, -1.0];</code></pre><h2 id="Harvey-Estimator"><a class="docs-heading-anchor" href="#Harvey-Estimator">Harvey Estimator</a><a id="Harvey-Estimator-1"></a><a class="docs-heading-anchor-permalink" href="#Harvey-Estimator" title="Permalink"></a></h2><p>The Harvey (1976) model specifies multiplicative heteroskedasticity via an exponential variance function:</p><p class="math-container">\[\begin{aligned}
-y_i &amp;= \mathbf{x}_i^\top \boldsymbol{\beta} + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0,\,\sigma_i^2) \\[4pt]
-\sigma_i^2 &amp;= \exp(\mathbf{x}_i^\top \boldsymbol{\gamma})
-\end{aligned}\]</p><p>We simulate data with log variance proportional to x1.</p><p>Note: the auxiliary OLS regresses log(u<em>hat^2) - c on X, where c = E[log(chi^2(1))] = digamma(1/2) + log(2) = -1.2703628454614782.  Subtracting c centres the error term so that E[v</em>i] = 0.  Because c·1 lies in the column space of X (an intercept is always present), OLS absorbs the shift exactly into the intercept, yielding consistent estimates of all gamma coefficients regardless of whether the regressors have non-zero means.  The WLS beta estimates are unaffected in any case because a constant shift to the intercept of log(sigma^2) rescales all weights by the same factor, which cancels in the WLS normal equations.</p><pre><code class="language-julia hljs">gamma_h  = [0.0, 1.0, 0.0]
-sigma_h  = exp.(0.5 .* (X_full * gamma_h))
-y_harvey = X_full * b_true .+ sigma_h .* randn(n);</code></pre><p><strong>Matrix interface</strong> – pass regressors without a constant column; <code>Z</code> defaults to the augmented mean regressors but can be any matrix with a constant column:</p><pre><code class="language-julia hljs">two_step_harvey(X, y_harvey)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+nobs   = 500
+x1     = randn(nobs)
+x2     = randn(nobs)
+b = [1.0, 2.0, -1.0];              # beta true parameters</code></pre><h2 id="Exponential-Variance-Model:"><a class="docs-heading-anchor" href="#Exponential-Variance-Model:">Exponential Variance Model:</a><a id="Exponential-Variance-Model:-1"></a><a class="docs-heading-anchor-permalink" href="#Exponential-Variance-Model:" title="Permalink"></a></h2><p>The Harvey (1976) model specifies multiplicative heteroskedasticity via an exponential variance function:</p><p class="math-container">\[\begin{aligned}
+\sigma_i^2 &amp;= \sigma^2_0 \exp(\mathbf{z}_i^\top \boldsymbol{\gamma})
+\end{aligned}\]</p><p>We simulate data with log variance proportional to <span>$|\mathbf{x}_1|$</span> and <span>$\sigma_0=1$</span>.</p><pre><code class="language-julia hljs">sigma_0 = 1.0;
+gamma   = [1.0, 0.0];
+sigma_exp = sigma_0 * exp.((gamma[1] .* abs.(x1) .+ gamma[2] .* x2) ./ 2);</code></pre><p>The simulated dataset (<span>$data$</span>) is</p><pre><code class="language-julia hljs">y    = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ sigma_exp .* randn(nobs);
+data = (y = y, x1 = x1, x2 = x2);</code></pre><p><strong>MLE</strong> (<code>exponential_mle</code>): jointly maximises the log-likelihood over <span>$(\boldsymbol{\beta}, \boldsymbol{\gamma})$</span> via L-BFGS, warm-started from the Harvey auxiliary regression. Equivalent to R&#39;s <code>nlme::gls(weights = varComb(varExp(...)))</code>.</p><p><code>exponential_mle(formula, data; Z=nothing) -&gt; HeteroMLEResult</code></p><pre><code class="language-julia hljs">exponential_mle(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────────────
+                Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────────
+(Intercept)   1.00997   0.0632213   15.98    &lt;1e-45   0.885755   1.13418
+x1            1.90611   0.0881646   21.62    &lt;1e-72   1.73289    2.07933
+x2           -1.02156   0.061346   -16.65    &lt;1e-49  -1.14209   -0.901027
+─────────────────────────────────────────────────────────────────────────
+Link: Exponential — σ²ᵢ = exp(γ₀ + zᵢ′γ)    [Harvey 1976]
+Log-variance equation (gamma):
+──────────────────────────────────────────────────────────────────────
+              Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────
+log σ₀²  -0.0344842   0.106269   -0.32    0.7456  -0.242768  0.1738
+z1        1.05254     0.0988821  10.64    &lt;1e-25   0.85873   1.24634
+z2       -0.095787    0.0637538  -1.50    0.1330  -0.220742  0.0291681
+──────────────────────────────────────────────────────────────────────
+Log-likelihood: -927.5787   Converged: true   Iterations: 10
+N: 500   R^2: 0.617   Adj. R^2: 0.6154
+</code></pre><p><strong>Two-step FWLS</strong> (<code>exponential_fwls</code>): a closed-form alternative that requires no numerical optimisation. Preferable when MLE fails to converge or when the normality assumption is in doubt, since FWLS is consistent under any error distribution with the correct variance model.</p><p><code>exponential_fwls(formula, data; Z=nothing) -&gt; ExponentialFWLSResult</code></p><pre><code class="language-julia hljs">exponential_fwls(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────────────
+                Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────────
+(Intercept)   1.01124   0.0837127   12.08    &lt;1e-28   0.846768   1.17572
+x1            1.90355   0.12354     15.41    &lt;1e-43   1.66082    2.14627
+x2           -1.02852   0.08088    -12.72    &lt;1e-31  -1.18743   -0.869612
+─────────────────────────────────────────────────────────────────────────
+Log-variance equation (gamma):
+─────────────────────────────────────────────────────────────────────
+             Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────
+log σ₀²  -0.196615    0.169205  -1.16    0.2452  -0.528251  0.135021
+z1        1.21344     0.15656    7.75    &lt;1e-14   0.90659   1.5203
+z2       -0.100246    0.101157  -0.99    0.3217  -0.29851   0.0980186
+─────────────────────────────────────────────────────────────────────
+N: 500   R^2: 0.6169   Adj. R^2: 0.6154
+</code></pre><p><strong>Matrix interface</strong> (available for every estimator; <code>X</code> and <code>Z</code> without a constant column):</p><pre><code class="language-julia hljs">X   = hcat(x1, x2);
+Z_h = hcat(abs.(x1), x2);
+exponential_fwls(X, y; Z = Z_h)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────────────
+                Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────────
+(Intercept)   1.01124   0.0837127   12.08    &lt;1e-28   0.846768   1.17572
+x1            1.90355   0.12354     15.41    &lt;1e-43   1.66082    2.14627
+x2           -1.02852   0.08088    -12.72    &lt;1e-31  -1.18743   -0.869612
+─────────────────────────────────────────────────────────────────────────
+Log-variance equation (gamma):
+─────────────────────────────────────────────────────────────────────
+             Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────
+log σ₀²  -0.196615    0.169205  -1.16    0.2452  -0.528251  0.135021
+z1        1.21344     0.15656    7.75    &lt;1e-14   0.90659   1.5203
+z2       -0.100246    0.101157  -0.99    0.3217  -0.29851   0.0980186
+─────────────────────────────────────────────────────────────────────
+N: 500   R^2: 0.6169   Adj. R^2: 0.6154
+</code></pre><h2 id="Power-Variance-Model"><a class="docs-heading-anchor" href="#Power-Variance-Model">Power Variance Model</a><a id="Power-Variance-Model-1"></a><a class="docs-heading-anchor-permalink" href="#Power-Variance-Model" title="Permalink"></a></h2><p>The power variance model (Harvey 1976, multiplicative form) specifies:</p><p class="math-container">\[\begin{aligned}
+\sigma_i^2 &amp;= \sigma^2 \prod_j |z_{ij}|^{2\delta_j}
+\end{aligned}\]</p><p>Equivalently, <span>$\log\sigma_i^2 = \log\sigma^2 + 2\delta_1\log|z_{i1}| + \cdots$</span>, which is the Harvey exponential model applied to <span>$\log|Z|$</span>. The reported <span>$\boldsymbol{\gamma} = (\sigma^2, \delta_1, \ldots)$</span> is obtained via the delta-method reparametrisation.</p><p>We simulate data with <span>$\sigma_i^2 = |x_1|$</span> (i.e.\ <span>$\sigma^2 = 1$</span>, <span>$\delta_1 = 0.5$</span>).</p><pre><code class="language-julia hljs">sigma_pow = abs.(x1) .^ 0.5;
+y_pow     = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ sigma_pow .* randn(nobs);
+data_pow  = (y = y_pow, x1 = x1, x2 = x2);</code></pre><p><strong>MLE</strong> (<code>power_mle</code>): joint MLE warm-started from the Harvey auxiliary regression on <span>$\log|Z|$</span>. Reports <span>$(\sigma^2, \delta_1, \ldots)$</span> with delta-method standard errors.</p><pre><code class="language-julia hljs">power_mle(@formula(y ~ x1 + x2), data_pow; Z = @formula(0 ~ abs(x1)))</code></pre><pre><code class="nohighlight hljs">Coefficients:
 ──────────────────────────────────────────────────────────────────────────
-                Coef.  Std. Error        t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   1.00788  0.00270571   372.50    &lt;1e-99    1.00257   1.01318
-x1            2.00605  0.00192616  1041.48    &lt;1e-99    2.00228   2.00983
-x2           -1.00136  0.00193257  -518.15    &lt;1e-99   -1.00515  -0.997573
+(Intercept)   1.00317    0.0195705   51.26    &lt;1e-99   0.964722   1.04162
+x1            1.98875    0.0474852   41.88    &lt;1e-99   1.89546    2.08205
+x2           -0.999924   0.017665   -56.60    &lt;1e-99  -1.03463   -0.965217
 ──────────────────────────────────────────────────────────────────────────
+Link: Power       — log σ²ᵢ = γ₀ + Σγⱼlog|zᵢⱼ|
+Power variance equation (log σ², 2δ):
+─────────────────────────────────────────────────────────────────────
+             Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────
+log σ²  -0.0306619   0.0709218  -0.43    0.6655  -0.169666   0.108342
+z1       1.01287     0.0564796  17.93    &lt;1e-71   0.902172   1.12357
+─────────────────────────────────────────────────────────────────────
+Log-likelihood: -557.9243   Converged: true   Iterations: 12
+N: 500   R^2: 0.8743   Adj. R^2: 0.8738
+</code></pre><p><strong>Two-step FWLS</strong> (<code>power_fwls</code>):</p><pre><code class="language-julia hljs">power_fwls(@formula(y ~ x1 + x2), data_pow; Z = @formula(0 ~ abs(x1)))</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────────────
+                Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────────
+(Intercept)   1.00132   0.011958    83.74    &lt;1e-99   0.977826   1.02481
+x1            1.99449   0.022658    88.03    &lt;1e-99   1.94997    2.03901
+x2           -1.00398   0.0109698  -91.52    &lt;1e-99  -1.02553   -0.982426
+─────────────────────────────────────────────────────────────────────────
+Power variance equation (log σ², 2δ):
+────────────────────────────────────────────────────────────────────
+            Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+────────────────────────────────────────────────────────────────────
+log σ²  -0.210162    0.117995  -1.78    0.0749  -0.441428  0.0211047
+z1       0.841352    0.093567   8.99    &lt;1e-18   0.657964  1.02474
+────────────────────────────────────────────────────────────────────
+N: 500   R^2: 0.8744   Adj. R^2: 0.8739
+</code></pre><h2 id="Quadratic-Variance-Model"><a class="docs-heading-anchor" href="#Quadratic-Variance-Model">Quadratic Variance Model</a><a id="Quadratic-Variance-Model-1"></a><a class="docs-heading-anchor-permalink" href="#Quadratic-Variance-Model" title="Permalink"></a></h2><p>The Glejser (1969) model assumes the standard deviation is linear in auxiliary regressors <span>$\mathbf{z}_i$</span>:</p><p class="math-container">\[\begin{aligned}
+\sigma_i &amp;= \sigma_0 + \mathbf{z}_i^\top \boldsymbol{\gamma}
+\end{aligned}\]</p><p>We simulate data with <span>$\sigma_i$</span> linear in <span>$|\mathbf{x}_1|$</span>.</p><p>Because the variance depends on <span>$|\mathbf{x}_1|$</span>, not <span>$\mathbf{x}_1$</span> itself, we supply a custom auxiliary regressor matrix <code>Z = [|x1|, x2]</code> so the Glejser auxiliary regression is correctly specified.  Using the raw regressors would yield a badly biased gamma.</p><pre><code class="language-julia hljs">sigma = 0.5 .+ 0.3 .* abs.(x1);
+y = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ sigma .* randn(nobs);
+data = (y = y, x1 = x1, x2 = x2);
+quadratic_mle(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────────────
+                Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────────
+(Intercept)   1.01448   0.0301162   33.69    &lt;1e-99   0.955305   1.07365
+x1            2.03922   0.0399564   51.04    &lt;1e-99   1.96072    2.11772
+x2           -1.04103   0.02877    -36.18    &lt;1e-99  -1.09755   -0.984501
+─────────────────────────────────────────────────────────────────────────
+Link: Quadratic   — σᵢ  = γ₀ + zᵢ′γ          [Glejser 1969]
+Std. deviation equation (gamma):
+─────────────────────────────────────────────────────────────────
+        Coef.  Std. Error      z  Pr(&gt;|z|)   Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────
+σ₀  0.456078    0.0292284  15.60    &lt;1e-54   0.398792   0.513365
+z1  0.343226    0.0380666   9.02    &lt;1e-18   0.268617   0.417835
+z2  0.0137392   0.021326    0.64    0.5194  -0.0280591  0.0555374
+─────────────────────────────────────────────────────────────────
+Log-likelihood: -546.9842   Converged: true   Iterations: 11
+N: 500   R^2: 0.9003   Adj. R^2: 0.8999
+</code></pre><h2 id="Linear-Variance-Model"><a class="docs-heading-anchor" href="#Linear-Variance-Model">Linear Variance Model</a><a id="Linear-Variance-Model-1"></a><a class="docs-heading-anchor-permalink" href="#Linear-Variance-Model" title="Permalink"></a></h2><p>The linear variance model specifies the variance as a linear combination of auxiliary regressors <span>$\mathbf{z}_i$</span>:</p><p class="math-container">\[\begin{aligned}
+\sigma_i^2 &amp;= \gamma_0 + \mathbf{z}_i^\top \boldsymbol{\gamma}
+\end{aligned}\]</p><p>We simulate data with <span>$\sigma_i^2$</span> linear in <span>$|\mathbf{x}_1|$</span>.</p><pre><code class="language-julia hljs">sigma2 = 0.5 .+ 0.3 .* abs.(x1);
+y = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ sqrt.(sigma2) .* randn(nobs);
+data = (y = y, x1 = x1, x2 = x2);
+linear_mle(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────────────
+                Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────────
+(Intercept)   1.06012   0.0388198   27.31    &lt;1e-99   0.983849   1.13639
+x1            2.05141   0.0409823   50.06    &lt;1e-99   1.97089    2.13193
+x2           -1.00749   0.0375162  -26.85    &lt;1e-98  -1.0812    -0.933782
+─────────────────────────────────────────────────────────────────────────
+Link: Linear      — σ²ᵢ = γ₀ + zᵢ′γ
 Variance equation (gamma):
-─────────────────────────────────────────────────────────────────────────────
-                  Coef.  Std. Error       z  Pr(&gt;|z|)   Lower 95%   Upper 95%
-─────────────────────────────────────────────────────────────────────────────
-(Intercept)  -0.0116627  0.00706096   -1.65    0.0986  -0.025502   0.00217647
-z1            0.999699   0.00704527  141.90    &lt;1e-99   0.98589    1.01351
-z2            0.0026104  0.00710384    0.37    0.7133  -0.0113129  0.0165337
-─────────────────────────────────────────────────────────────────────────────
-N: 100000   R^2: 0.7529   Adj. R^2: 0.7529
-</code></pre><p><strong>Formula interface</strong> (all estimators support this):</p><pre><code class="language-julia hljs">data_harvey = (y = y_harvey, x1 = x1, x2 = x2)
-two_step_harvey(@formula(y ~ x1 + x2), data_harvey)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────
+         Coef.  Std. Error     z  Pr(&gt;|z|)   Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────
+σ₀²  0.55191     0.0783311  7.05    &lt;1e-11   0.398384    0.705436
+z1   0.266642    0.0968623  2.75    0.0059   0.0767957   0.456489
+z2   0.0289895   0.0432038  0.67    0.5022  -0.0556885   0.113667
+─────────────────────────────────────────────────────────────────
+Log-likelihood: -642.3411   Converged: true   Iterations: 4
+N: 500   R^2: 0.8856   Adj. R^2: 0.8851
+</code></pre><h2 id="Groupwise-Heteroskedasticity"><a class="docs-heading-anchor" href="#Groupwise-Heteroskedasticity">Groupwise Heteroskedasticity</a><a id="Groupwise-Heteroskedasticity-1"></a><a class="docs-heading-anchor-permalink" href="#Groupwise-Heteroskedasticity" title="Permalink"></a></h2><p>The groupwise model assumes a constant variance within each group <span>$g$</span>:</p><p class="math-container">\[\begin{aligned}
+\sigma_i^2 &amp;= \sigma_g^2, \quad i \in g
+\end{aligned}\]</p><p>We simulate four groups with increasing variance.</p><pre><code class="language-julia hljs">groups   = repeat([&quot;A&quot;, &quot;B&quot;, &quot;C&quot;, &quot;D&quot;], inner = nobs ÷ 4);
+sigma_gw = [0.5, 1.0, 1.5, 2.0];
+sigma_g  = [sigma_gw[findfirst(==( g), [&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;])] for g in groups];
+y_gw     = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ sigma_g .* randn(nobs);
+data_gw  = (y = y_gw, x1 = x1, x2 = x2);</code></pre><p><strong>MLE</strong> (<code>groupwise_mle</code>): exact MLE standard errors from <span>$(X^\top W X)^{-1}$</span>:</p><pre><code class="language-julia hljs">groupwise_mle(@formula(y ~ x1 + x2), data_gw, groups)</code></pre><pre><code class="nohighlight hljs">Coefficients:
 ──────────────────────────────────────────────────────────────────────────
-                Coef.  Std. Error        t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   1.00788  0.00270571   372.50    &lt;1e-99    1.00257   1.01318
-x1            2.00605  0.00192616  1041.48    &lt;1e-99    2.00228   2.00983
-x2           -1.00136  0.00193257  -518.15    &lt;1e-99   -1.00515  -0.997573
+(Intercept)   0.997978   0.0354523   28.15    &lt;1e-99   0.928323   1.06763
+x1            2.0166     0.0326343   61.79    &lt;1e-99   1.95249    2.08072
+x2           -0.944209   0.0342432  -27.57    &lt;1e-99  -1.01149   -0.876929
 ──────────────────────────────────────────────────────────────────────────
-Variance equation (gamma):
-─────────────────────────────────────────────────────────────────────────────
-                  Coef.  Std. Error       z  Pr(&gt;|z|)   Lower 95%   Upper 95%
-─────────────────────────────────────────────────────────────────────────────
-(Intercept)  -0.0116627  0.00706096   -1.65    0.0986  -0.025502   0.00217647
-z1            0.999699   0.00704527  141.90    &lt;1e-99   0.98589    1.01351
-z2            0.0026104  0.00710384    0.37    0.7133  -0.0113129  0.0165337
-─────────────────────────────────────────────────────────────────────────────
-N: 100000   R^2: 0.7529   Adj. R^2: 0.7529
-</code></pre><h2 id="Glejser-Estimator"><a class="docs-heading-anchor" href="#Glejser-Estimator">Glejser Estimator</a><a id="Glejser-Estimator-1"></a><a class="docs-heading-anchor-permalink" href="#Glejser-Estimator" title="Permalink"></a></h2><p>The Glejser (1969) model assumes the standard deviation is linear in auxiliary regressors <span>$\mathbf{z}_i$</span>:</p><p class="math-container">\[\begin{aligned}
-y_i &amp;= \mathbf{x}_i^\top \boldsymbol{\beta} + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0,\,\sigma_i^2) \\[4pt]
-\sigma_i &amp;= \mathbf{z}_i^\top \boldsymbol{\gamma}
-\end{aligned}\]</p><p>We simulate data with sigma linear in |x1|.</p><p>Because the variance depends on |x1|, not x1 itself, we supply a custom auxiliary regressor matrix Z = [ones(n), |x1|, x2] so the Glejser auxiliary regression is correctly specified.  Using the raw regressors X would yield a badly biased gamma.</p><pre><code class="language-julia hljs">sigma_g   = 0.5 .+ 0.3 .* abs.(x1)
-y_glejser = X_full * b_true .+ sigma_g .* randn(n);
+Group variances (G = 4):
+  Group              n_g            σ²           σ
+  ────────────────────────────────────────────────
+  A                  125      0.218385    0.467317
+  B                  125       0.90287    0.950195
+  C                  125      2.254301    1.501433
+  D                  125      4.065849    2.016395
 
-Z_glejser = hcat(ones(n), abs.(x1), x2);   # correctly specified auxiliary regressors</code></pre><p><strong>Matrix interface</strong> – pass regressors without a constant column:</p><pre><code class="language-julia hljs">two_step_glejser(X, y_glejser; Z = Z_glejser)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+Log-likelihood: -746.4561   Converged: true   Iterations: 6
+N: 500   R^2: 0.7613   Adj. R^2: 0.7603
+</code></pre><p><strong>Iterated FWLS</strong> (<code>iterated_groupwise</code>): identical point estimates, GLM-scaled standard errors:</p><pre><code class="language-julia hljs">iterated_groupwise(@formula(y ~ x1 + x2), data_gw, groups)</code></pre><pre><code class="nohighlight hljs">Coefficients:
 ──────────────────────────────────────────────────────────────────────────
-                Coef.  Std. Error        t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   1.00399  0.00147948   678.61    &lt;1e-99    1.00109    1.00689
-x1            1.99645  0.00198644  1005.04    &lt;1e-99    1.99256    2.00035
-x2           -1.00321  0.00148741  -674.47    &lt;1e-99   -1.00613   -1.0003
+(Intercept)   0.997978   0.0281327   35.47    &lt;1e-99   0.942704    1.05325
+x1            2.0166     0.0258966   77.87    &lt;1e-99   1.96572     2.06748
+x2           -0.944209   0.0271733  -34.75    &lt;1e-99  -0.997597   -0.89082
 ──────────────────────────────────────────────────────────────────────────
-Std. deviation equation (gamma):
-────────────────────────────────────────────────────────────────────────────────
-                   Coef.  Std. Error       z  Pr(&gt;|z|)    Lower 95%    Upper 95%
-────────────────────────────────────────────────────────────────────────────────
-(Intercept)   0.496552    0.00302554  164.12    &lt;1e-99   0.490622    0.502482
-z1            0.304044    0.00301881  100.72    &lt;1e-99   0.298127    0.30996
-z2           -0.00282386  0.00183203   -1.54    0.1232  -0.00641456  0.000766848
-────────────────────────────────────────────────────────────────────────────────
-N: 100000   R^2: 0.8958   Adj. R^2: 0.8958
-</code></pre><p><strong>Formula interface:</strong></p><pre><code class="language-julia hljs">data_glejser = (y = y_glejser, x1 = x1, x2 = x2);
-two_step_glejser(@formula(y ~ x1 + x2), data_glejser; Z = Z_glejser)</code></pre><pre><code class="nohighlight hljs">Coefficients:
-──────────────────────────────────────────────────────────────────────────
-                Coef.  Std. Error        t  Pr(&gt;|t|)  Lower 95%  Upper 95%
-──────────────────────────────────────────────────────────────────────────
-(Intercept)   1.00399  0.00147948   678.61    &lt;1e-99    1.00109    1.00689
-x1            1.99645  0.00198644  1005.04    &lt;1e-99    1.99256    2.00035
-x2           -1.00321  0.00148741  -674.47    &lt;1e-99   -1.00613   -1.0003
-──────────────────────────────────────────────────────────────────────────
-Std. deviation equation (gamma):
-────────────────────────────────────────────────────────────────────────────────
-                   Coef.  Std. Error       z  Pr(&gt;|z|)    Lower 95%    Upper 95%
-────────────────────────────────────────────────────────────────────────────────
-(Intercept)   0.496552    0.00302554  164.12    &lt;1e-99   0.490622    0.502482
-z1            0.304044    0.00301881  100.72    &lt;1e-99   0.298127    0.30996
-z2           -0.00282386  0.00183203   -1.54    0.1232  -0.00641456  0.000766848
-────────────────────────────────────────────────────────────────────────────────
-N: 100000   R^2: 0.8958   Adj. R^2: 0.8958
-</code></pre><h2 id="AR(1)-Estimators"><a class="docs-heading-anchor" href="#AR(1)-Estimators">AR(1) Estimators</a><a id="AR(1)-Estimators-1"></a><a class="docs-heading-anchor-permalink" href="#AR(1)-Estimators" title="Permalink"></a></h2><p>We simulate data with AR(1) errors: u<em>t = 0.7 * u</em>{t-1} + e_t.</p><pre><code class="language-julia hljs">eps  = randn(n)
-u_ar = zeros(n)
-for t in 2:n; u_ar[t] = 0.7 * u_ar[t-1] + eps[t]; end
-y_ar = X_full * b_true .+ u_ar;</code></pre><p><strong>Prais-Winsten</strong> – retains the first observation via GLS transformation:</p><pre><code class="language-julia hljs">two_step_prais_winsten(X, y_ar)</code></pre><pre><code class="nohighlight hljs">Coefficients:
-───────────────────────────────────────────────────────────────────────────
-                 Coef.  Std. Error        t  Pr(&gt;|t|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────────────────
-(Intercept)   0.991258  0.010647      93.10    &lt;1e-99    0.97039   1.01213
-x1            1.99996   0.00257471   776.77    &lt;1e-99    1.99491   2.005
-x2           -0.998589  0.00259584  -384.69    &lt;1e-99   -1.00368  -0.993501
-───────────────────────────────────────────────────────────────────────────
+Group variances (G = 4):
+  Group              n_g            σ²           σ
+  ────────────────────────────────────────────────
+  A                  125      0.218385    0.467317
+  B                  125       0.90287    0.950195
+  C                  125      2.254301    1.501433
+  D                  125      4.065849    2.016395
+
+Log-likelihood: -746.4561   Converged: true   Iterations: 6
+N: 500   R^2: 0.7613   Adj. R^2: 0.7603
+</code></pre><h2 id="AR(1)-Estimators"><a class="docs-heading-anchor" href="#AR(1)-Estimators">AR(1) Estimators</a><a id="AR(1)-Estimators-1"></a><a class="docs-heading-anchor-permalink" href="#AR(1)-Estimators" title="Permalink"></a></h2><p>We simulate data with AR(1) errors: <span>$u_t = 0.7\, u_{t-1} + e_t$</span>.</p><pre><code class="language-julia hljs">eps  = randn(nobs);
+u_ar = zeros(nobs);
+for t in 2:nobs; u_ar[t] = 0.7 * u_ar[t-1] + eps[t]; end
+y_ar    = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ u_ar;
+data_ar = (y = y_ar, x1 = x1, x2 = x2);</code></pre><p><strong>Prais-Winsten</strong> – retains the first observation via GLS transformation:</p><pre><code class="language-julia hljs">two_step_prais_winsten(@formula(y ~ x1 + x2), data_ar)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────────────
+                Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────────
+(Intercept)   1.04781   0.156339     6.70    &lt;1e-10   0.740645   1.35498
+x1            1.98397   0.0321344   61.74    &lt;1e-99   1.92083    2.04711
+x2           -0.97822   0.0344398  -28.40    &lt;1e-99  -1.04589   -0.910554
+─────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
-───────────────────────────────────────────────────────────────
-      Coef.  Std. Error       z  Pr(&gt;|z|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────
-ρ  0.703354  0.00224787  312.90    &lt;1e-99   0.698948    0.70776
-───────────────────────────────────────────────────────────────
-N: 100000   R^2: 0.7164   Adj. R^2: 0.7164
-</code></pre><p><strong>Hildreth-Lu</strong> – grid search over rho in (-0.99, 0.99):</p><pre><code class="language-julia hljs">hildreth_lu(X, y_ar)</code></pre><pre><code class="nohighlight hljs">Coefficients:
-───────────────────────────────────────────────────────────────────────────
-                 Coef.  Std. Error        t  Pr(&gt;|t|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────────────────
-(Intercept)   0.991258  0.0105797     93.69    &lt;1e-99   0.970522   1.01199
-x1            1.99995   0.00257704   776.07    &lt;1e-99   1.9949     2.005
-x2           -0.998589  0.00259818  -384.34    &lt;1e-99  -1.00368   -0.993497
-───────────────────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────
+      Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────
+ρ  0.727404   0.0306882  23.70    &lt;1e-99   0.667256   0.787552
+──────────────────────────────────────────────────────────────
+N: 500   R^2: 0.7477   Adj. R^2: 0.7467
+</code></pre><p><strong>Hildreth-Lu</strong> – grid search over <span>$\rho \in (-0.99,\, 0.99)$</span>:</p><pre><code class="language-julia hljs">hildreth_lu(@formula(y ~ x1 + x2), data_ar)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   1.04824    0.159783     6.56    &lt;1e-09    0.73431   1.36218
+x1            1.98394    0.0321171   61.77    &lt;1e-99    1.92084   2.04705
+x2           -0.978189   0.0344114  -28.43    &lt;1e-99   -1.0458   -0.910579
+──────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
-───────────────────────────────────────────────────────────────
-      Coef.  Std. Error       z  Pr(&gt;|z|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────
-ρ  0.701457  0.00225379  311.23    &lt;1e-99    0.69704   0.705875
-───────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────
+      Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────
+ρ  0.731307   0.0305022  23.98    &lt;1e-99   0.671523    0.79109
+──────────────────────────────────────────────────────────────
 Grid points: 200
-N: 100000   R^2: 0.7164   Adj. R^2: 0.7164
-</code></pre><p><strong>Beach-MacKinnon</strong> – exact maximum likelihood:</p><pre><code class="language-julia hljs">beach_mackinnon(X, y_ar)</code></pre><pre><code class="nohighlight hljs">Coefficients:
-───────────────────────────────────────────────────────────────────────────
-                 Coef.  Std. Error        t  Pr(&gt;|t|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────────────────
-(Intercept)   0.991258  0.0106469     93.10    &lt;1e-99    0.97039   1.01213
-x1            1.99996   0.00257471   776.77    &lt;1e-99    1.99491   2.005
-x2           -0.998589  0.00259584  -384.69    &lt;1e-99   -1.00368  -0.993501
-───────────────────────────────────────────────────────────────────────────
+N: 500   R^2: 0.7477   Adj. R^2: 0.7467
+</code></pre><p><strong>Beach-MacKinnon</strong> – exact maximum likelihood:</p><pre><code class="language-julia hljs">beach_mackinnon(@formula(y ~ x1 + x2), data_ar)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   1.04781    0.155994     6.72    &lt;1e-10   0.741318    1.35429
+x1            1.98398    0.0321437   61.72    &lt;1e-99   1.92082     2.04713
+x2           -0.978225   0.0344497  -28.40    &lt;1e-99  -1.04591    -0.91054
+──────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
-───────────────────────────────────────────────────────────────
-      Coef.  Std. Error       z  Pr(&gt;|z|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────
-ρ  0.703351  0.00224788  312.90    &lt;1e-99   0.698946   0.707757
-───────────────────────────────────────────────────────────────
-Log-likelihood: 121.9405   Converged: true
-N: 100000   R^2: 0.7164   Adj. R^2: 0.7164
-</code></pre><h2 id="Combined-AR(1)-Heteroskedasticity"><a class="docs-heading-anchor" href="#Combined-AR(1)-Heteroskedasticity">Combined AR(1) + Heteroskedasticity</a><a id="Combined-AR(1)-Heteroskedasticity-1"></a><a class="docs-heading-anchor-permalink" href="#Combined-AR(1)-Heteroskedasticity" title="Permalink"></a></h2><p>The DGP is u<em>t = rho * u</em>{t-1} + sigma<em>t * eps</em>t with Harvey-type heteroskedasticity in the innovations.  True parameters: rho = 0.7, gamma = [0.0, 1.0, 0.0] (reusing sigma_h from the Harvey section above).</p><p>Note: the Sequential estimator runs the Harvey auxiliary regression on the Prais-Winsten transformed regressors Xstar, so its reported gamma refers to that transformed system and will only approximately match the true values.  The Joint estimator uses the original regressors and exact MLE, so its gamma should be close to [0.0, 1.0, 0.0].</p><pre><code class="language-julia hljs">u_hae = zeros(n)
-for t in 2:n; u_hae[t] = 0.7 * u_hae[t-1] + sigma_h[t] * eps[t]; end
-y_hae = X_full * b_true .+ u_hae;</code></pre><p><strong>Sequential HARE</strong> – corrects for AR(1) first, then heteroskedasticity:</p><pre><code class="language-julia hljs">two_step_sequential(X, y_hae)</code></pre><pre><code class="nohighlight hljs">Coefficients:
-───────────────────────────────────────────────────────────────────────────
-                 Coef.  Std. Error        t  Pr(&gt;|t|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────────────────
-(Intercept)   0.993548  0.00829009   119.85    &lt;1e-99   0.977299   1.0098
-x1            1.99851   0.00155863  1282.22    &lt;1e-99   1.99546    2.00157
-x2           -0.998394  0.00156198  -639.18    &lt;1e-99  -1.00146   -0.995332
-───────────────────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────
+      Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────
+ρ  0.726796    0.030717  23.66    &lt;1e-99   0.666591      0.787
+──────────────────────────────────────────────────────────────
+Log-likelihood: 22.6585   Converged: true
+N: 500   R^2: 0.7477   Adj. R^2: 0.7467
+</code></pre><h2 id="R-Cross-Validation"><a class="docs-heading-anchor" href="#R-Cross-Validation">R Cross-Validation</a><a id="R-Cross-Validation-1"></a><a class="docs-heading-anchor-permalink" href="#R-Cross-Validation" title="Permalink"></a></h2><p>Each MLE estimator has an exact R counterpart in <code>nlme::gls</code>.  Below we run both on the same dataset — generated once in Julia with <code>StableRNG</code> and saved to CSV so R can read it back — so the output tables can be compared directly.  The data uses <code>StableRNG(42)</code> for the predictors and <code>StableRNG(99)</code> for the noise.</p><pre><code class="language-julia hljs">using StableRNGs
+rng_r  = StableRNG(42);
+rng_r2 = StableRNG(99);
+n_r    = 500;
+x1_r   = randn(rng_r, n_r);
+x2_r   = randn(rng_r, n_r);
+Xr     = hcat(x1_r, x2_r);
+br     = [1.0, 2.0, -1.0];</code></pre><h3 id="Exponential-MLE"><a class="docs-heading-anchor" href="#Exponential-MLE">Exponential MLE</a><a id="Exponential-MLE-1"></a><a class="docs-heading-anchor-permalink" href="#Exponential-MLE" title="Permalink"></a></h3><p>R code:</p><pre><code class="language-r hljs">library(nlme)
+d &lt;- read.csv(&quot;hare_exp.csv&quot;)   # x1, x2, y — written from Julia
+m &lt;- gls(y ~ x1 + x2, data = d, weights = varExp(form = ~x1), method = &quot;ML&quot;)
+summary(m)</code></pre><p>R output:</p><pre><code class="nohighlight hljs">Generalized least squares fit by maximum likelihood
+  Model: y ~ x1 + x2
+  Data: d
+       AIC      BIC    logLik
+  1399.339 1420.412 -694.6695
+
+Variance function:
+ Structure: Exponential of variance covariate
+ Formula: ~x1
+ Parameter estimates:
+    expon
+0.5400336
+
+Coefficients:
+                 Value Std.Error   t-value p-value
+(Intercept)  0.9762948 0.0494178  19.75594       0
+x1           1.9933986 0.0311266  64.04173       0
+x2          -1.0114907 0.0298082 -33.93332       0
+
+Residual standard error: 1.001954
+Degrees of freedom: 500 total; 497 residual</code></pre><p>HARE: <code>gamma[1]</code> = <span>$\log\sigma^2$</span> = <code>log(sigma^2)</code> from R; <code>gamma[2]</code> = <span>$2\delta$</span> = <code>2 * 0.5400336</code>:</p><pre><code class="language-julia hljs">y_r_exp = br[1] .+ br[2] .* x1_r .+ br[3] .* x2_r .+ exp.(0.5 .* x1_r) .* randn(rng_r2, n_r);
+exponential_mle(Xr, y_r_exp; Z = hcat(x1_r))</code></pre><pre><code class="nohighlight hljs">Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   0.976295   0.0492883   19.81    &lt;1e-64   0.879456   1.07313
+x1            1.9934     0.0310571   64.19    &lt;1e-99   1.93238    2.05442
+x2           -1.01149    0.029809   -33.93    &lt;1e-99  -1.07006   -0.952924
+──────────────────────────────────────────────────────────────────────────
+Link: Exponential — σ²ᵢ = exp(γ₀ + zᵢ′γ)    [Harvey 1976]
+Log-variance equation (gamma):
+──────────────────────────────────────────────────────────────────────
+              Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────
+log σ₀²  0.00390501   0.0633408   0.06    0.9508  -0.120241   0.128051
+z1       1.08007      0.0594226  18.18    &lt;1e-73   0.963601   1.19653
+──────────────────────────────────────────────────────────────────────
+Log-likelihood: -694.6695   Converged: true   Iterations: 10
+N: 500   R^2: 0.738   Adj. R^2: 0.7369
+</code></pre><h3 id="Power-MLE"><a class="docs-heading-anchor" href="#Power-MLE">Power MLE</a><a id="Power-MLE-1"></a><a class="docs-heading-anchor-permalink" href="#Power-MLE" title="Permalink"></a></h3><p>R code:</p><pre><code class="language-r hljs">d &lt;- read.csv(&quot;hare_pow.csv&quot;)
+m &lt;- gls(y ~ x1 + x2, data = d, weights = varPower(form = ~abs(x1)), method = &quot;ML&quot;)
+summary(m)</code></pre><p>R output:</p><pre><code class="nohighlight hljs">Generalized least squares fit by maximum likelihood
+  Model: y ~ x1 + x2
+  Data: d
+       AIC      BIC    logLik
+  1141.608 1162.681 -565.8042
+
+Variance function:
+ Structure: Power of variance covariate
+ Formula: ~abs(x1)
+ Parameter estimates:
+    power
+0.4773703
+
+Coefficients:
+                 Value Std.Error   t-value p-value
+(Intercept)  0.9955270 0.0228240  43.61754       0
+x1           2.1150261 0.0483900  43.70791       0
+x2          -0.9639498 0.0242141 -39.80943       0
+
+Residual standard error: 0.98068
+Degrees of freedom: 500 total; 497 residual</code></pre><p>HARE: <code>gamma[1]</code> = <span>$\log\sigma^2$</span>; <code>gamma[2]</code> = <span>$2\delta$</span> = <code>2 * 0.4773703</code>:</p><pre><code class="language-julia hljs">y_r_pow = br[1] .+ br[2] .* x1_r .+ br[3] .* x2_r .+ abs.(x1_r).^0.5 .* randn(rng_r2, n_r);
+power_mle(Xr, y_r_pow; Z = hcat(abs.(x1_r)))</code></pre><pre><code class="nohighlight hljs">Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   0.995527   0.0227699   43.72    &lt;1e-99    0.95079   1.04026
+x1            2.11503    0.0483153   43.78    &lt;1e-99    2.0201    2.20995
+x2           -0.96395    0.0241777  -39.87    &lt;1e-99   -1.01145  -0.916447
+──────────────────────────────────────────────────────────────────────────
+Link: Power       — log σ²ᵢ = γ₀ + Σγⱼlog|zᵢⱼ|
+Power variance equation (log σ², 2δ):
+─────────────────────────────────────────────────────────────────────
+             Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────
+log σ²  -0.0390182   0.0750069  -0.52    0.6029  -0.186029   0.107993
+z1       0.954741    0.0718746  13.28    &lt;1e-39   0.813869   1.09561
+─────────────────────────────────────────────────────────────────────
+Log-likelihood: -565.8042   Converged: true   Iterations: 11
+N: 500   R^2: 0.8838   Adj. R^2: 0.8833
+</code></pre><h3 id="Groupwise-MLE"><a class="docs-heading-anchor" href="#Groupwise-MLE">Groupwise MLE</a><a id="Groupwise-MLE-1"></a><a class="docs-heading-anchor-permalink" href="#Groupwise-MLE" title="Permalink"></a></h3><p>R code:</p><pre><code class="language-r hljs">d &lt;- read.csv(&quot;hare_gw.csv&quot;)
+d$group &lt;- factor(d$group)
+m &lt;- gls(y ~ x1 + x2, data = d, weights = varIdent(form = ~1 | group), method = &quot;ML&quot;)
+summary(m)</code></pre><p>R output:</p><pre><code class="nohighlight hljs">Generalized least squares fit by maximum likelihood
+  Model: y ~ x1 + x2
+  Data: d
+       AIC      BIC    logLik
+  1464.294 1493.797 -725.1472
+
+Variance function:
+ Structure: Different standard deviations per stratum
+ Formula: ~1 | group
+ Parameter estimates:
+       1        2        3        4
+1.000000 1.661873 2.666309 3.399754
+
+Coefficients:
+                 Value Std.Error   t-value p-value
+(Intercept)  0.9999977 0.0373464  26.77628       0
+x1           1.9740476 0.0362961  54.38735       0
+x2          -0.9412746 0.0376907 -24.97368       0
+
+Residual standard error: 0.5237556
+Degrees of freedom: 500 total; 497 residual</code></pre><p>R&#39;s <code>varIdent</code> reports relative SDs per group (group 1 = reference = 1.0). HARE reports <span>$\sigma_g^2$</span> directly for each group:</p><pre><code class="language-julia hljs">gw_r_groups = repeat([&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;], inner = n_r ÷ 4);
+gw_r_sig    = Dict(&quot;A&quot;=&gt;0.5,&quot;B&quot;=&gt;1.0,&quot;C&quot;=&gt;1.5,&quot;D&quot;=&gt;2.0);
+y_r_gw      = br[1] .+ br[2] .* x1_r .+ br[3] .* x2_r .+ [gw_r_sig[g] for g in gw_r_groups] .* randn(rng_r2, n_r);
+groupwise_mle(Xr, y_r_gw, gw_r_groups)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   0.999998   0.0372344   26.86    &lt;1e-98   0.926842   1.07315
+x1            1.97405    0.0361872   54.55    &lt;1e-99   1.90295    2.04515
+x2           -0.941275   0.0375776  -25.05    &lt;1e-89  -1.01511   -0.867444
+──────────────────────────────────────────────────────────────────────────
+Group variances (G = 4):
+  Group              n_g            σ²           σ
+  ────────────────────────────────────────────────
+  A                  125      0.274323    0.523759
+  B                  125      0.757638    0.870424
+  C                  125      1.950139    1.396474
+  D                  125       3.17067    1.780638
+
+Log-likelihood: -725.1472   Converged: true   Iterations: 5
+N: 500   R^2: 0.7556   Adj. R^2: 0.7547
+</code></pre><h2 id="Consistency:-Exponential-MLE"><a class="docs-heading-anchor" href="#Consistency:-Exponential-MLE">Consistency: Exponential MLE</a><a id="Consistency:-Exponential-MLE-1"></a><a class="docs-heading-anchor-permalink" href="#Consistency:-Exponential-MLE" title="Permalink"></a></h2><p>With a large sample the MLE should recover the true parameters <span>$\boldsymbol{\beta} = [1, 2, -1]$</span> and <span>$\boldsymbol{\gamma} = [0, 1, 0]$</span> (intercept <span>$\log\sigma_0^2 = 0$</span>, slope on <span>$x_1$</span> equal to 1, slope on <span>$x_2$</span> equal to 0).</p><pre><code class="language-julia hljs">rng_c   = StableRNG(42);
+N       = 1_000_000;
+x1_c    = randn(rng_c, N);
+x2_c    = randn(rng_c, N);
+sigma_c = exp.(0.5 .* x1_c);
+y_c     = 1.0 .+ 2.0 .* x1_c .- 1.0 .* x2_c .+ sigma_c .* randn(rng_c, N);
+data_c  = (y = y_c, x1 = x1_c, x2 = x2_c);
+
+m_c = exponential_mle(@formula(y ~ x1 + x2), data_c)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────────────────
+                 Coef.   Std. Error         t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────────────
+(Intercept)   1.00085   0.00109866     910.97    &lt;1e-99   0.998701   1.00301
+x1            2.00132   0.00077413    2585.26    &lt;1e-99   1.99981    2.00284
+x2           -0.999302  0.000777795  -1284.79    &lt;1e-99  -1.00083   -0.997778
+─────────────────────────────────────────────────────────────────────────────
+Link: Exponential — σ²ᵢ = exp(γ₀ + zᵢ′γ)    [Harvey 1976]
+Log-variance equation (gamma):
+─────────────────────────────────────────────────────────────────────────────
+               Coef.  Std. Error       z  Pr(&gt;|z|)    Lower 95%     Upper 95%
+─────────────────────────────────────────────────────────────────────────────
+log σ₀²  -0.00301577  0.00141422   -2.13    0.0330  -0.00578758  -0.000243958
+z1        0.998305    0.0014144   705.82    &lt;1e-99   0.995533     1.00108
+z2        7.49778e-5  0.00141193    0.05    0.9576  -0.00269235   0.0028423
+─────────────────────────────────────────────────────────────────────────────
+Log-likelihood: -1.4174502441e6   Converged: true   Iterations: 8
+N: 1000000   R^2: 0.7534   Adj. R^2: 0.7534
+</code></pre><h2 id="Combined-AR(1)-Heteroskedasticity"><a class="docs-heading-anchor" href="#Combined-AR(1)-Heteroskedasticity">Combined AR(1) + Heteroskedasticity</a><a id="Combined-AR(1)-Heteroskedasticity-1"></a><a class="docs-heading-anchor-permalink" href="#Combined-AR(1)-Heteroskedasticity" title="Permalink"></a></h2><p>The DGP is <span>$u_t = \rho\, u_{t-1} + \sigma_t\, \varepsilon_t$</span> with Harvey-type heteroskedasticity in the innovations. True parameters: <span>$\rho = 0.7$</span>, <span>$\boldsymbol{\gamma} = [1,\, 0]$</span> (reusing <code>sigma_exp</code> from the Exponential Variance section above).</p><p>The Sequential estimator runs the Harvey auxiliary regression on the Prais-Winsten transformed regressors <span>$\mathbf{X}^*$</span>, so its reported <span>$\boldsymbol{\gamma}$</span> refers to that transformed system and will only approximately match the true values.  The Joint estimator uses the original regressors and exact MLE, so its <span>$\boldsymbol{\gamma}$</span> should be close to <span>$[1, 0]$</span>.</p><pre><code class="language-julia hljs">u_hae = zeros(nobs);
+for t in 2:nobs; u_hae[t] = 0.7 * u_hae[t-1] + sigma_exp[t] * eps[t]; end
+y_hae    = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ u_hae;
+data_hae = (y = y_hae, x1 = x1, x2 = x2);</code></pre><p><strong>Sequential HARE</strong> – corrects for AR(1) first, then heteroskedasticity:</p><pre><code class="language-julia hljs">two_step_sequential(@formula(y ~ x1 + x2), data_hae)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   1.12074    0.398607     2.81    0.0051   0.337578    1.9039
+x1            1.97418    0.0761599   25.92    &lt;1e-93   1.82454     2.12381
+x2           -0.956121   0.0789269  -12.11    &lt;1e-29  -1.11119    -0.80105
+──────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
-───────────────────────────────────────────────────────────────
-      Coef.  Std. Error       z  Pr(&gt;|z|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────
-ρ  0.703059   0.0022488  312.64    &lt;1e-99   0.698651   0.707466
-───────────────────────────────────────────────────────────────
-Variance equation (gamma):
-─────────────────────────────────────────────────────────────────────────────
-                   Coef.  Std. Error       z  Pr(&gt;|z|)   Lower 95%  Upper 95%
-─────────────────────────────────────────────────────────────────────────────
-(Intercept)  -0.00363408  0.00702222   -0.52    0.6048  -0.0173974  0.0101292
-z1            1.01024     0.00700662  144.18    &lt;1e-99   0.996505   1.02397
-z2           -0.0068742   0.00706487   -0.97    0.3305  -0.0207211  0.0069727
-─────────────────────────────────────────────────────────────────────────────
-N: 100000   R^2: 0.6048   Adj. R^2: 0.6048
-</code></pre><p><strong>Joint HARE</strong> – estimates AR(1) and heteroskedasticity simultaneously:</p><pre><code class="language-julia hljs">two_step_joint(X, y_hae)</code></pre><pre><code class="nohighlight hljs">Coefficients:
-───────────────────────────────────────────────────────────────────────────
-                 Coef.  Std. Error        t  Pr(&gt;|t|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────────────────
-(Intercept)   0.993475  0.0106618     93.18    &lt;1e-99   0.972578   1.01437
-x1            1.99852   0.00202304   987.88    &lt;1e-99   1.99456    2.00249
-x2           -0.998417  0.00202758  -492.42    &lt;1e-99  -1.00239   -0.994443
-───────────────────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────
+      Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────
+ρ  0.745123   0.0298259  24.98    &lt;1e-99   0.686666   0.803581
+──────────────────────────────────────────────────────────────
+Log-variance equation (gamma):
+────────────────────────────────────────────────────────────────────────
+              Coef.  Std. Error      z  Pr(&gt;|z|)    Lower 95%  Upper 95%
+────────────────────────────────────────────────────────────────────────
+log σ₀²   0.770468    0.107988    7.13    &lt;1e-12   0.558817     0.98212
+z1       -0.0298522   0.0994588  -0.30    0.7641  -0.224788     0.165083
+z2        0.20556     0.105997    1.94    0.0525  -0.00219074   0.413312
+────────────────────────────────────────────────────────────────────────
+N: 500   R^2: 0.5242   Adj. R^2: 0.5223
+</code></pre><p><strong>Joint HARE</strong> – estimates AR(1) and heteroskedasticity simultaneously:</p><pre><code class="language-julia hljs">two_step_joint(@formula(y ~ x1 + x2), data_hae)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   1.13175    0.271743     4.16    &lt;1e-04   0.597846    1.66566
+x1            1.97398    0.0516019   38.25    &lt;1e-99   1.8726      2.07537
+x2           -0.964105   0.0548852  -17.57    &lt;1e-53  -1.07194    -0.85627
+──────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
-───────────────────────────────────────────────────────────────
-      Coef.  Std. Error       z  Pr(&gt;|z|)  Lower 95%  Upper 95%
-───────────────────────────────────────────────────────────────
-ρ  0.701447  0.00225382  311.23    &lt;1e-99   0.697029   0.705864
-───────────────────────────────────────────────────────────────
-Variance equation (gamma):
-──────────────────────────────────────────────────────────────────────────────
-                   Coef.  Std. Error       z  Pr(&gt;|z|)   Lower 95%   Upper 95%
-──────────────────────────────────────────────────────────────────────────────
-(Intercept)  -0.00244232  0.00447215   -0.55    0.5850  -0.0112076  0.00632293
-z1            1.00172     0.00446364  224.42    &lt;1e-99   0.99297    1.01047
-z2           -0.00283999  0.0045213    -0.63    0.5299  -0.0117016  0.00602161
-──────────────────────────────────────────────────────────────────────────────
-Log-likelihood: -49976.5514
-N: 100000   R^2: 0.6048   Adj. R^2: 0.6048
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Sunday 17 May 2026 03:06">Sunday 17 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+──────────────────────────────────────────────────────────────
+      Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────
+ρ  0.746719    0.029746  25.10    &lt;1e-99   0.688418    0.80502
+──────────────────────────────────────────────────────────────
+Log-variance equation (gamma):
+────────────────────────────────────────────────────────────────────────
+               Coef.  Std. Error      z  Pr(&gt;|z|)   Lower 95%  Upper 95%
+────────────────────────────────────────────────────────────────────────
+log σ₀²   0.866203     0.0634286  13.66    &lt;1e-41   0.741885    0.990521
+z1       -0.00414998   0.0450442  -0.09    0.9266  -0.0924349   0.084135
+z2        0.0454146    0.0703273   0.65    0.5184  -0.0924245   0.183254
+────────────────────────────────────────────────────────────────────────
+Log-likelihood: -467.4608
+N: 500   R^2: 0.5243   Adj. R^2: 0.5223
+</code></pre><h2 id="Heteroskedasticity-Tests"><a class="docs-heading-anchor" href="#Heteroskedasticity-Tests">Heteroskedasticity Tests</a><a id="Heteroskedasticity-Tests-1"></a><a class="docs-heading-anchor-permalink" href="#Heteroskedasticity-Tests" title="Permalink"></a></h2><p>HARE provides two score (LM) tests for heteroskedasticity that are unique to the package.  Both test <span>$H_0\colon \gamma = 0$</span> (homoskedasticity) and are distributed as <span>$\chi^2(p)$</span> under <span>$H_0$</span>, where <span>$p$</span> is the number of variance regressors (columns of <span>$Z$</span> excluding the intercept).</p><p>We reuse the exponential-variance dataset from the first section (<span>$n = 500$</span>, <span>$\log\sigma_i^2 = x_{1i}$</span>), so both tests should reject strongly. The R equivalents are <code>skedastic::harvey()</code> and <code>skedastic::glejser()</code>.</p><p><strong>Harvey test</strong> – LM statistic <span>$\text{ESS}/\text{trigamma}(1/2)$</span> from the auxiliary regression of <span>$\log\hat{u}_i^2$</span> on <span>$Z$</span>:</p><pre><code class="language-julia hljs">y_test   = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ sigma_exp .* randn(nobs);
+data_test = (y = y_test, x1 = x1, x2 = x2);
+
+harvey_test(@formula(y ~ x1 + x2), data_test)</code></pre><pre><code class="nohighlight hljs">Harvey test for multiplicative heteroskedasticity (exponential link)
+  H₀: γ = 0  in  log(σᵢ²) = γ₀ + zᵢ&#39;γ
+  LM = 0.4511   df = 2   p-value = 0.7981
+</code></pre><p><strong>Glejser test</strong> – LM statistic from the auxiliary regression of <span>$|\hat{u}_i|$</span> on <span>$Z$</span>:</p><pre><code class="language-julia hljs">glejser_test(@formula(y ~ x1 + x2), data_test)</code></pre><pre><code class="nohighlight hljs">Glejser test for heteroskedasticity (quadratic link / linear SD)
+  H₀: γ = 0  in  σᵢ = γ₀ + zᵢ&#39;γ
+  LM = 2.3974   df = 2   p-value = 0.3016
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Monday 18 May 2026 17:31">Monday 18 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
