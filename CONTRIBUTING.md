@@ -3,9 +3,12 @@
 ## Repository layout
 
 ```
-HARE/
+HARE.jl/
 ├── src/            # Package source code
-├── test/           # Test suite (runtests.jl)
+├── test/
+│   ├── runtests.jl             # Fast test suite (< 30s); runs on every CI push
+│   ├── runtests_r.jl           # R cross-validation (hardcoded reference values; no R needed)
+│   └── runtests_consistency.jl # Large-n consistency tests (N = 1_000_000, ~60s; run manually)
 ├── examples/       # demo.jl — tutorial source (executed by Literate)
 ├── docs/
 │   ├── make.jl     # Documenter build script
@@ -24,7 +27,7 @@ HARE/
 ### Locally
 
 ```bash
-# From the repo root
+# Fast test suite (< 30s) — run before every commit
 julia --project=. -e 'import Pkg; Pkg.test()'
 ```
 
@@ -34,6 +37,22 @@ Or interactively in a REPL:
 julia --project=.
 # then in the package REPL mode (]):
 ] test
+```
+
+**R cross-validation** (`test/runtests_r.jl`) — validates HARE against R reference
+implementations (prais, orcutt, skedastic, nlme).  No R installation required;
+reference values are hardcoded.  Run with:
+
+```bash
+julia --project=. test/runtests_r.jl
+```
+
+**Large-n consistency tests** (`test/runtests_consistency.jl`) — checks all
+estimators at $N = 1\,000\,000$ with `StableRNG(123)`.  Takes ~60s.  Run
+manually before releasing or after changing estimation algorithms:
+
+```bash
+julia --project=. test/runtests_consistency.jl
 ```
 
 ### On GitHub
@@ -189,6 +208,9 @@ include("test/runtests.jl")
 4. Add doctest examples to the docstring and `@testset` blocks to
    `test/runtests.jl`, covering the matrix interface, the formula
    interface, and the `gamma_vcov` / `rho` inference fields where
-   applicable.
+   applicable.  Add a large-n consistency test to
+   `test/runtests_consistency.jl` (N = 1_000_000, `StableRNG`, `atol = 0.01`).
+   If an equivalent R implementation exists, add a cross-validation testset to
+   `test/runtests_r.jl`.
 5. Run `julia --project=docs docs/make.jl` to confirm the docstring
    renders correctly and the tutorial executes without errors.
