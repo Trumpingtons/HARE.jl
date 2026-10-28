@@ -91,7 +91,7 @@ Power variance equation (log σ², 2δ):
 log σ²  -0.0306619   0.0709218  -0.43    0.6655  -0.169666   0.108342
 z1       1.01287     0.0564796  17.93    &lt;1e-71   0.902172   1.12357
 ─────────────────────────────────────────────────────────────────────
-Log-likelihood: -557.9243   Converged: true   Iterations: 12
+Log-likelihood: -557.9243   Converged: true   Iterations: 11
 N: 500   R^2: 0.8743   Adj. R^2: 0.8738
 </code></pre><p><strong>Two-step FWLS</strong> (<code>power_fwls</code>):</p><pre><code class="language-julia hljs">power_fwls(@formula(y ~ x1 + x2), data_pow; Z = @formula(0 ~ abs(x1)))</code></pre><pre><code class="nohighlight hljs">Coefficients:
 ─────────────────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ Std. deviation equation (gamma):
 z1  0.343226    0.0380666   9.02    &lt;1e-18   0.268617   0.417835
 z2  0.0137392   0.021326    0.64    0.5194  -0.0280591  0.0555374
 ─────────────────────────────────────────────────────────────────
-Log-likelihood: -546.9842   Converged: true   Iterations: 11
+Log-likelihood: -546.9842   Converged: true   Iterations: 10
 N: 500   R^2: 0.9003   Adj. R^2: 0.8999
 </code></pre><h2 id="Linear-Variance-Model"><a class="docs-heading-anchor" href="#Linear-Variance-Model">Linear Variance Model</a><a id="Linear-Variance-Model-1"></a><a class="docs-heading-anchor-permalink" href="#Linear-Variance-Model" title="Permalink"></a></h2><p>The linear variance model specifies the variance as a linear combination of auxiliary regressors <span>$\mathbf{z}_i$</span>:</p><p class="math-container">\[\begin{aligned}
 \sigma_i^2 &amp;= \gamma_0 + \mathbf{z}_i^\top \boldsymbol{\gamma}
@@ -297,7 +297,7 @@ Log-variance equation (gamma):
 log σ₀²  0.00390501   0.0633408   0.06    0.9508  -0.120241   0.128051
 z1       1.08007      0.0594226  18.18    &lt;1e-73   0.963601   1.19653
 ──────────────────────────────────────────────────────────────────────
-Log-likelihood: -694.6695   Converged: true   Iterations: 10
+Log-likelihood: -694.6695   Converged: true   Iterations: 9
 N: 500   R^2: 0.738   Adj. R^2: 0.7369
 </code></pre><h3 id="Power-MLE"><a class="docs-heading-anchor" href="#Power-MLE">Power MLE</a><a id="Power-MLE-1"></a><a class="docs-heading-anchor-permalink" href="#Power-MLE" title="Permalink"></a></h3><p>R code:</p><pre><code class="language-r hljs">d &lt;- read.csv(&quot;hare_pow.csv&quot;)
 m &lt;- gls(y ~ x1 + x2, data = d, weights = varPower(form = ~abs(x1)), method = &quot;ML&quot;)
@@ -407,9 +407,9 @@ Log-variance equation (gamma):
 ─────────────────────────────────────────────────────────────────────────────
 log σ₀²  -0.00301577  0.00141422   -2.13    0.0330  -0.00578758  -0.000243958
 z1        0.998305    0.0014144   705.82    &lt;1e-99   0.995533     1.00108
-z2        7.49778e-5  0.00141193    0.05    0.9576  -0.00269235   0.0028423
+z2        7.49777e-5  0.00141193    0.05    0.9576  -0.00269235   0.0028423
 ─────────────────────────────────────────────────────────────────────────────
-Log-likelihood: -1.4174502441e6   Converged: true   Iterations: 13
+Log-likelihood: -1.4174502441e6   Converged: true   Iterations: 7
 N: 1000000   R^2: 0.7534   Adj. R^2: 0.7534
 </code></pre><h2 id="Combined-AR(1)-Heteroskedasticity"><a class="docs-heading-anchor" href="#Combined-AR(1)-Heteroskedasticity">Combined AR(1) + Heteroskedasticity</a><a id="Combined-AR(1)-Heteroskedasticity-1"></a><a class="docs-heading-anchor-permalink" href="#Combined-AR(1)-Heteroskedasticity" title="Permalink"></a></h2><p>The DGP is <span>$u_t = \rho\, u_{t-1} + \sigma_t\, \varepsilon_t$</span> with Harvey-type heteroskedasticity in the innovations. True parameters: <span>$\rho = 0.7$</span>, <span>$\boldsymbol{\gamma} = [1,\, 0]$</span> on <span>$(|x_1|, x_2)$</span> (reusing <code>sigma_exp</code> from the Exponential Variance section above).</p><p>Both estimators run the log-variance regression in the original space: the Sequential estimator regresses the log squared Prais-Winsten residuals on <span>$\mathbf{Z}$</span>, since the innovations <span>$\sigma_t \varepsilon_t$</span> have variance <span>$\sigma_0^2 \exp(\mathbf{z}_t^\top \boldsymbol{\gamma})$</span>; the Joint estimator maximises the exact likelihood. As in the sections above, <code>Z = [|x1|, x2]</code> is passed, so both report <span>$\boldsymbol{\gamma}$</span> for the variables the variance depends on.</p><pre><code class="language-julia hljs">u_hae = zeros(nobs);
 for t in 2:nobs; u_hae[t] = 0.7 * u_hae[t-1] + sigma_exp[t] * eps[t]; end
@@ -470,4 +470,4 @@ harvey_test(@formula(y ~ x1 + x2), data_test)</code></pre><pre><code class="nohi
 </code></pre><p><strong>Glejser test</strong> – LM statistic from the auxiliary regression of <span>$|\hat{u}_i|$</span> on <span>$Z$</span>:</p><pre><code class="language-julia hljs">glejser_test(@formula(y ~ x1 + x2), data_test)</code></pre><pre><code class="nohighlight hljs">Glejser test for heteroskedasticity (quadratic link / linear SD)
   H₀: γ = 0  in  σᵢ = γ₀ + zᵢ&#39;γ
   LM = 2.3974   df = 2   p-value = 0.3016
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 28 October 2026 17:43">Wednesday 28 October 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 28 October 2026 17:59">Wednesday 28 October 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
