@@ -58,7 +58,7 @@ data = (y = y, x1 = x1, x2 = x2);
 # $(\boldsymbol{\beta}, \boldsymbol{\gamma})$ via L-BFGS, warm-started from the Harvey
 # auxiliary regression. Equivalent to R's `nlme::gls(weights = varComb(varExp(...)))`.
 #
-# `exponential_mle(formula, data; Z=nothing) -> HeteroMLEResult`
+# `exponential_mle(formula, data; Z=nothing) -> MLEResult`
 exponential_mle(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))
 
 # **Two-step FWLS** (`exponential_fwls`): a closed-form alternative that requires no
@@ -66,7 +66,7 @@ exponential_mle(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))
 # assumption is in doubt, since FWLS is consistent under any error distribution with
 # the correct variance model.
 #
-# `exponential_fwls(formula, data; Z=nothing) -> ExponentialFWLSResult`
+# `exponential_fwls(formula, data; Z=nothing) -> FWLSResult`
 exponential_fwls(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))
 
 # **Matrix interface** (available for every estimator; `X` and `Z` without a constant column):
@@ -347,15 +347,15 @@ m_c = exponential_mle(@formula(y ~ x1 + x2), data_c)
 #
 # The DGP is $u_t = \rho\, u_{t-1} + \sigma_t\, \varepsilon_t$ with Harvey-type
 # heteroskedasticity in the innovations.
-# True parameters: $\rho = 0.7$, $\boldsymbol{\gamma} = [1,\, 0]$
+# True parameters: $\rho = 0.7$, $\boldsymbol{\gamma} = [1,\, 0]$ on $(|x_1|, x_2)$
 # (reusing `sigma_exp` from the Exponential Variance section above).
 #
-# The Sequential estimator runs the Harvey auxiliary regression on the
-# Prais-Winsten transformed regressors $\mathbf{X}^*$, so its reported
-# $\boldsymbol{\gamma}$ refers to that transformed system and will only
-# approximately match the true values.  The Joint estimator uses the original
-# regressors and exact MLE, so its $\boldsymbol{\gamma}$ should be close to
-# $[1, 0]$.
+# Both estimators run the log-variance regression in the original space: the
+# Sequential estimator regresses the log squared Prais-Winsten residuals on
+# $\mathbf{Z}$, since the innovations $\sigma_t \varepsilon_t$ have variance
+# $\sigma_0^2 \exp(\mathbf{z}_t^\top \boldsymbol{\gamma})$; the Joint estimator maximises
+# the exact likelihood. As in the sections above, `Z = [|x1|, x2]` is passed, so
+# both report $\boldsymbol{\gamma}$ for the variables the variance depends on.
 
 u_hae = zeros(nobs);
 for t in 2:nobs; u_hae[t] = 0.7 * u_hae[t-1] + sigma_exp[t] * eps[t]; end
@@ -363,10 +363,10 @@ y_hae    = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ u_hae;
 data_hae = (y = y_hae, x1 = x1, x2 = x2);
 
 # **Sequential HARE** -- corrects for AR(1) first, then heteroskedasticity:
-two_step_sequential(@formula(y ~ x1 + x2), data_hae)
+two_step_sequential(@formula(y ~ x1 + x2), data_hae; Z = @formula(0 ~ abs(x1) + x2))
 
 # **Joint HARE** -- estimates AR(1) and heteroskedasticity simultaneously:
-two_step_joint(@formula(y ~ x1 + x2), data_hae)
+two_step_joint(@formula(y ~ x1 + x2), data_hae; Z = @formula(0 ~ abs(x1) + x2))
 
 # ## Heteroskedasticity Tests
 #

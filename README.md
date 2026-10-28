@@ -26,32 +26,38 @@ Pkg.add(url = "https://github.com/Trumpingtons/HARE.jl")
 
 ### Heteroskedasticity only
 
-Two variance models are available. **Harvey** models log variance as a linear function of the regressors (`log(sigma_i^2) = x_i' * gamma`), estimated via WLS on log-squared OLS residuals. **Glejser** models the standard deviation directly (`sigma_i = z_i' * gamma`) using a separate auxiliary regressor matrix `Z` (defaults to `X`). Both offer a two-step variant (one WLS pass) and an iterated variant that alternates until convergence.
+Four variance functions are available, each on auxiliary regressors `Z` (without a constant column; a constant is prepended, and `Z` defaults to `X`). Each has a two-step FWLS estimator (one auxiliary regression, then WLS), an iterated FWLS estimator that alternates until convergence, and a maximum likelihood estimator.
 
-| Function | Variance model | Result type |
-|:---------|:---------------|:------------|
-| `two_step_harvey` | Harvey: `log(sigma_i^2) = x_i' * gamma` | `HarveyResult` |
-| `iterated_harvey` | Harvey: `log(sigma_i^2) = x_i' * gamma` | `HarveyResult` |
-| `two_step_glejser` | Glejser: `sigma_i = z_i' * gamma` | `GlejserResult` |
-| `iterated_glejser` | Glejser: `sigma_i = z_i' * gamma` | `GlejserResult` |
+| Variance function | Two-step FWLS | Iterated FWLS | MLE |
+|:------------------|:--------------|:--------------|:----|
+| Exponential (Harvey 1976): `sigma_i^2 = sigma_0^2 * exp(z_i' * gamma)` | `exponential_fwls` | `exponential_ifwls` | `exponential_mle` |
+| Quadratic (Glejser 1969): `sigma_i = gamma_0 + z_i' * gamma` | `quadratic_fwls` | `quadratic_ifwls` | `quadratic_mle` |
+| Linear: `sigma_i^2 = gamma_0 + z_i' * gamma` | `linear_fwls` | `linear_ifwls` | `linear_mle` |
+| Power: `sigma_i^2 = sigma^2 * prod_j abs(z_ij)^(2 * delta_j)` (`Z` required) | `power_fwls` | `power_ifwls` | `power_mle` |
+
+The FWLS estimators return `FWLSResult`, the MLE estimators `MLEResult`.
+
+**Groupwise** heteroskedasticity, one variance per group (`sigma_i^2 = sigma_g^2`), takes a vector of group labels: `two_step_groupwise(X, y, groups)`, `iterated_groupwise` and `groupwise_mle`, each returning `GroupwiseResult`.
 
 ### AR(1) autocorrelation only
 
-Four estimators handle serial correlation under the AR(1) model `u_t = rho * u_{t-1} + e_t`. **Prais-Winsten** FGLS preserves the first observation via a GLS transformation, available in two-step and iterated forms. **Hildreth-Lu** is also GLS-based, but searches a grid of rho values and picks the one minimising RSS. **Beach-MacKinnon** maximises the exact concentrated likelihood over rho using Brent's method, with regression coefficients recovered analytically.
+Six estimators handle serial correlation under the AR(1) model `u_t = rho * u_{t-1} + e_t`. **Prais-Winsten** FGLS preserves the first observation via a GLS transformation; **Cochrane-Orcutt** drops it. Both come in two-step and iterated forms. **Hildreth-Lu** is also GLS-based, but searches a grid of rho values and picks the one minimising RSS. **Beach-MacKinnon** maximises the exact concentrated likelihood over rho using Brent's method, with regression coefficients recovered analytically. All return `AR1Result`.
 
-| Function | Method | Result type |
-|:---------|:-------|:------------|
-| `two_step_prais_winsten` | Prais-Winsten FGLS | `PraisWinstenResult` |
-| `iterated_prais_winsten` | Prais-Winsten FGLS | `PraisWinstenResult` |
-| `hildreth_lu` | Grid search over rho | `HildrethLuResult` |
-| `beach_mackinnon` | Exact MLE (Brent) | `BeachMacKinnonResult` |
+| Function | Method |
+|:---------|:-------|
+| `two_step_prais_winsten` | Prais-Winsten FGLS |
+| `iterated_prais_winsten` | Prais-Winsten FGLS |
+| `two_step_cochrane_orcutt` | Cochrane-Orcutt FGLS |
+| `iterated_cochrane_orcutt` | Cochrane-Orcutt FGLS |
+| `hildreth_lu` | Grid search over rho |
+| `beach_mackinnon` | Exact MLE (Brent) |
 
 ### AR(1) + Heteroskedasticity combined
 
 Two strategies are available for handling both effects simultaneously.
 
 **Sequential HARE** -- corrects for autocorrelation first (Prais-Winsten), then
-heteroskedasticity (Harvey), alternating until convergence. The two effects
+heteroskedasticity (exponential variance on `Z`), alternating until convergence. The two effects
 are estimated separately in each pass.
 
 | Function | Result type |
@@ -82,17 +88,17 @@ n   = 500
 x1  = randn(n); x2 = randn(n)
 X = hcat(x1, x2)
 
-# Heteroskedastic errors (Harvey DGP)
+# Heteroskedastic errors (exponential variance)
 y_het = hcat(ones(n), X) * [1.0, 2.0, -1.0] .+ exp.(0.5 .* x1) .* randn(n)
 
-m = iterated_harvey(X, y_het)
+m = exponential_ifwls(X, y_het)
 ```
 
 The `@formula` interface works identically to GLM.jl:
 
 ```julia
 data = (y = y_het, x1 = x1, x2 = x2)
-m = iterated_harvey(@formula(y ~ x1 + x2), data)
+m = exponential_ifwls(@formula(y ~ x1 + x2), data)
 ```
 
 AR(1) correction with the Prais-Winsten estimator:
@@ -127,20 +133,21 @@ m.gamma   # log-variance coefficients gamma_hat
 m.loglik  # maximised log-likelihood
 ```
 
-The Glejser estimator models `sigma_i` (not `sigma_i^2`) linearly in auxiliary
+The quadratic (Glejser) estimator models `sigma_i` (not `sigma_i^2`) linearly in auxiliary
 regressors. An alternative `Z` matrix can be supplied for the variance equation:
 
 ```julia
-Z = hcat(ones(n), abs.(x1))   # variance depends on |x1| only
-m = iterated_glejser(X, y_het; Z=Z)
+Z = hcat(abs.(x1))   # variance depends on |x1| only; the constant is added
+m = quadratic_ifwls(X, y_het; Z=Z)
 ```
 
-The same `Z` keyword is available for `two_step_joint` and `iterated_joint`.
+With the formula interface, `Z` is a formula: `Z = @formula(0 ~ abs(x1))`.
+The same `Z` keyword is available for the sequential and joint estimators.
 
 To fit a model **without** an intercept, pass `intercept=false`:
 
 ```julia
-m = two_step_harvey(X, y_het; intercept=false)
+m = exponential_fwls(X, y_het; intercept=false)
 ```
 
 ## StatsBase Interface
@@ -185,7 +192,7 @@ termnames(m)      # ["(Intercept)", "x1", "x2"]
 responsename(m)   # "y"
 ```
 
-`BeachMacKinnonResult` and `JointResult` additionally expose `loglikelihood(m)`.
+`MLEResult`, `GroupwiseResult`, `JointResult` and the `AR1Result` of `beach_mackinnon` additionally expose `loglikelihood(m)`.
 
 Typing `m` in the REPL displays a formatted coefficient table:
 
@@ -204,18 +211,18 @@ N: 500   R^2: 0.9421   Adj. R^2: 0.9419
 
 ## Prediction
 
-Matrix-fitted models accept a new design matrix:
+Matrix-fitted models accept a new design matrix, including the constant column when the model has an intercept:
 
 ```julia
-m = iterated_harvey(X, y_het)
-predict(m, Xnew)
+m = exponential_ifwls(X, y_het)
+predict(m, hcat(ones(size(Xnew, 1)), Xnew))
 ```
 
 Formula-fitted models accept a new data table and apply the original
 encoding automatically:
 
 ```julia
-m   = iterated_harvey(@formula(y ~ x1 + x2), data)
+m   = exponential_ifwls(@formula(y ~ x1 + x2), data)
 predict(m, newdata)   # Tables.jl-compatible: DataFrame, NamedTuple, etc.
 ```
 
@@ -240,9 +247,9 @@ wald_test(m, R)
 wald_test(m, [0.0 1.0 0.0], [1.0])
 ```
 
-### Likelihood ratio test (Beach-MacKinnon and Joint HARE)
+### Likelihood ratio test (Beach-MacKinnon)
 
-Compares two nested models with a `loglik` field. Restricted model is passed first.
+Compares two nested Beach-MacKinnon models. Restricted model is passed first.
 
 ```julia
 X1 = X[:, 1:1]   # x1 only
@@ -253,6 +260,19 @@ lrtest(m_r, m_u)
 # Likelihood ratio test:
 # LR = 95.43   df = 1   p-value = 0.0000
 ```
+
+### Specification tests
+
+| Function | Null hypothesis |
+|:---------|:----------------|
+| `harvey_test(X, y; Z)` | no multiplicative (exponential) heteroskedasticity |
+| `glejser_test(X, y; Z)` | no heteroskedasticity with a linear standard deviation |
+| `breusch_pagan_test(X, y)` | homoskedasticity (Breusch-Pagan) |
+| `white_test(X, y)` | homoskedasticity (White) |
+| `durbin_watson_test(X, y)` | no first-order autocorrelation |
+| `breusch_godfrey_test(X, y, lag)` | no autocorrelation up to `lag` |
+
+Each also accepts `(formula, data)`.
 
 ## Ecosystem Integration
 

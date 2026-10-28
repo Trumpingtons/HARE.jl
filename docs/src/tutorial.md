@@ -68,7 +68,7 @@ data = (y = y, x1 = x1, x2 = x2);
 $(\boldsymbol{\beta}, \boldsymbol{\gamma})$ via L-BFGS, warm-started from the Harvey
 auxiliary regression. Equivalent to R's `nlme::gls(weights = varComb(varExp(...)))`.
 
-`exponential_mle(formula, data; Z=nothing) -> HeteroMLEResult`
+`exponential_mle(formula, data; Z=nothing) -> MLEResult`
 
 ````julia
 exponential_mle(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))
@@ -102,7 +102,7 @@ numerical optimisation. Preferable when MLE fails to converge or when the normal
 assumption is in doubt, since FWLS is consistent under any error distribution with
 the correct variance model.
 
-`exponential_fwls(formula, data; Z=nothing) -> ExponentialFWLSResult`
+`exponential_fwls(formula, data; Z=nothing) -> FWLSResult`
 
 ````julia
 exponential_fwls(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))
@@ -633,7 +633,7 @@ Power variance equation (log σ², 2δ):
 log σ²  -0.0390182   0.0750069  -0.52    0.6029  -0.186029   0.107993
 z1       0.954741    0.0718746  13.28    <1e-39   0.813869   1.09561
 ─────────────────────────────────────────────────────────────────────
-Log-likelihood: -565.8042   Converged: true   Iterations: 12
+Log-likelihood: -565.8042   Converged: true   Iterations: 11
 N: 500   R^2: 0.8838   Adj. R^2: 0.8833
 
 ````
@@ -741,7 +741,7 @@ log σ₀²  -0.00301577  0.00141422   -2.13    0.0330  -0.00578758  -0.00024395
 z1        0.998305    0.0014144   705.82    <1e-99   0.995533     1.00108
 z2        7.49778e-5  0.00141193    0.05    0.9576  -0.00269235   0.0028423
 ─────────────────────────────────────────────────────────────────────────────
-Log-likelihood: -1.4174502441e6   Converged: true   Iterations: 9
+Log-likelihood: -1.4174502441e6   Converged: false   Iterations: 13
 N: 1000000   R^2: 0.7534   Adj. R^2: 0.7534
 
 ````
@@ -750,15 +750,15 @@ N: 1000000   R^2: 0.7534   Adj. R^2: 0.7534
 
 The DGP is $u_t = \rho\, u_{t-1} + \sigma_t\, \varepsilon_t$ with Harvey-type
 heteroskedasticity in the innovations.
-True parameters: $\rho = 0.7$, $\boldsymbol{\gamma} = [1,\, 0]$
+True parameters: $\rho = 0.7$, $\boldsymbol{\gamma} = [1,\, 0]$ on $(|x_1|, x_2)$
 (reusing `sigma_exp` from the Exponential Variance section above).
 
-The Sequential estimator runs the Harvey auxiliary regression on the
-Prais-Winsten transformed regressors $\mathbf{X}^*$, so its reported
-$\boldsymbol{\gamma}$ refers to that transformed system and will only
-approximately match the true values.  The Joint estimator uses the original
-regressors and exact MLE, so its $\boldsymbol{\gamma}$ should be close to
-$[1, 0]$.
+Both estimators run the log-variance regression in the original space: the
+Sequential estimator regresses the log squared Prais-Winsten residuals on
+$\mathbf{Z}$, since the innovations $\sigma_t \varepsilon_t$ have variance
+$\sigma_0^2 \exp(\mathbf{z}_t^\top \boldsymbol{\gamma})$; the Joint estimator maximises
+the exact likelihood. As in the sections above, `Z = [|x1|, x2]` is passed, so
+both report $\boldsymbol{\gamma}$ for the variables the variance depends on.
 
 ````julia
 u_hae = zeros(nobs);
@@ -770,7 +770,7 @@ data_hae = (y = y_hae, x1 = x1, x2 = x2);
 **Sequential HARE** -- corrects for AR(1) first, then heteroskedasticity:
 
 ````julia
-two_step_sequential(@formula(y ~ x1 + x2), data_hae)
+two_step_sequential(@formula(y ~ x1 + x2), data_hae; Z = @formula(0 ~ abs(x1) + x2))
 ````
 
 ````
@@ -778,9 +778,9 @@ Coefficients:
 ──────────────────────────────────────────────────────────────────────────
                  Coef.  Std. Error       t  Pr(>|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   1.12074    0.398607     2.81    0.0051   0.337578    1.9039
-x1            1.97418    0.0761599   25.92    <1e-93   1.82454     2.12381
-x2           -0.956121   0.0789269  -12.11    <1e-29  -1.11119    -0.80105
+(Intercept)   1.0166     0.331721     3.06    0.0023   0.364854   1.66835
+x1            1.9606     0.0757041   25.90    <1e-93   1.81186    2.10933
+x2           -0.955632   0.0655662  -14.58    <1e-39  -1.08445   -0.826811
 ──────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
 ──────────────────────────────────────────────────────────────
@@ -789,21 +789,21 @@ AR(1) coefficient:
 ρ  0.745123   0.0298259  24.98    <1e-99   0.686666   0.803581
 ──────────────────────────────────────────────────────────────
 Log-variance equation (gamma):
-────────────────────────────────────────────────────────────────────────
-              Coef.  Std. Error      z  Pr(>|z|)    Lower 95%  Upper 95%
-────────────────────────────────────────────────────────────────────────
-log σ₀²   0.770468    0.107988    7.13    <1e-12   0.558817     0.98212
-z1       -0.0298522   0.0994588  -0.30    0.7641  -0.224788     0.165083
-z2        0.20556     0.105997    1.94    0.0525  -0.00219074   0.413312
-────────────────────────────────────────────────────────────────────────
-N: 500   R^2: 0.5242   Adj. R^2: 0.5223
+─────────────────────────────────────────────────────────────────────
+             Coef.  Std. Error     z  Pr(>|z|)   Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────
+log σ₀²  0.0337159    0.173542  0.19    0.8460  -0.30642     0.373852
+z1       0.857706     0.160573  5.34    <1e-07   0.542989    1.17242
+z2       0.143196     0.10375   1.38    0.1675  -0.0601497   0.346542
+─────────────────────────────────────────────────────────────────────
+N: 500   R^2: 0.5228   Adj. R^2: 0.5209
 
 ````
 
 **Joint HARE** -- estimates AR(1) and heteroskedasticity simultaneously:
 
 ````julia
-two_step_joint(@formula(y ~ x1 + x2), data_hae)
+two_step_joint(@formula(y ~ x1 + x2), data_hae; Z = @formula(0 ~ abs(x1) + x2))
 ````
 
 ````
@@ -811,26 +811,26 @@ Coefficients:
 ──────────────────────────────────────────────────────────────────────────
                  Coef.  Std. Error       t  Pr(>|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   1.13175    0.271743     4.16    <1e-04   0.597846    1.66566
-x1            1.97398    0.0516019   38.25    <1e-99   1.8726      2.07537
-x2           -0.964105   0.0548852  -17.57    <1e-53  -1.07194    -0.85627
+(Intercept)   1.04166     0.234634    4.44    <1e-04   0.580665   1.50266
+x1            1.96357     0.055024   35.69    <1e-99   1.85547    2.07168
+x2           -0.964916    0.049563  -19.47    <1e-62  -1.06229   -0.867537
 ──────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
-──────────────────────────────────────────────────────────────
-      Coef.  Std. Error      z  Pr(>|z|)  Lower 95%  Upper 95%
-──────────────────────────────────────────────────────────────
-ρ  0.746719    0.029746  25.10    <1e-99   0.688418    0.80502
-──────────────────────────────────────────────────────────────
+─────────────────────────────────────────────────────────────
+     Coef.  Std. Error      z  Pr(>|z|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────
+ρ  0.73498    0.030325  24.24    <1e-99   0.675544   0.794416
+─────────────────────────────────────────────────────────────
 Log-variance equation (gamma):
-────────────────────────────────────────────────────────────────────────
-               Coef.  Std. Error      z  Pr(>|z|)   Lower 95%  Upper 95%
-────────────────────────────────────────────────────────────────────────
-log σ₀²   0.866203     0.0634286  13.66    <1e-41   0.741885    0.990521
-z1       -0.00414998   0.0450442  -0.09    0.9266  -0.0924349   0.084135
-z2        0.0454146    0.0703273   0.65    0.5184  -0.0924245   0.183254
-────────────────────────────────────────────────────────────────────────
-Log-likelihood: -467.4608
-N: 500   R^2: 0.5243   Adj. R^2: 0.5223
+──────────────────────────────────────────────────────────────────────
+              Coef.  Std. Error     z  Pr(>|z|)   Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────
+log σ₀²  0.1395       0.108134   1.29    0.1970  -0.0724395   0.351439
+z1       0.712469     0.101468   7.02    <1e-11   0.513596    0.911342
+z2       0.00611855   0.0678506  0.09    0.9281  -0.126866    0.139103
+──────────────────────────────────────────────────────────────────────
+Log-likelihood: -439.3689
+N: 500   R^2: 0.5234   Adj. R^2: 0.5214
 
 ````
 
