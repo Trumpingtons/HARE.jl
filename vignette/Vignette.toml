@@ -1,0 +1,14 @@
+# The vignette of HARE.jl, shown in Help > Documentation > Vignettes once the package is installed.
+
+article = ""
+author = "Antonio Saragga Seabra"
+citation = ""
+description = "Feasible GLS for regressions whose errors change size, carry over from one period to the next, or both: variance models, the AR(1) estimators, the two together, and the tests that tell which it is, checked against R."
+license = "MIT"
+method = "Heteroskedasticity and AR(1) errors"
+package = "HARE"
+pdf = "HARE.pdf"
+repository = "https://github.com/Trumpingtons/HARE.jl"
+title = "HARE: errors that change size, errors that remember"
+topic = "Linear Models"
+version = "0.1.0"

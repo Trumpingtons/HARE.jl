@@ -259,6 +259,10 @@ lrtest(m_r, m_u)
 `HAREModel <: StatsBase.RegressionModel` means HARE results work directly
 with packages that support the standard interface.
 
+## Vignette
+
+[HARE: errors that change size, errors that remember](vignette/HARE.pdf)
+
 ## References
 
 - Harvey, A. C. (1976). Estimating regression models with multiplicative heteroscedasticity. *Econometrica*, 44(3), 461-465.

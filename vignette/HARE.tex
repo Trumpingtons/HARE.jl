@@ -1,0 +1,245 @@
+% Pollis Domain Packages: Heteroskedasticity and AR(1) errors (HARE.jl) -- draft 1 (28 October 2026)
+% Compile with: latexmk -pdf HARE.tex && latexmk -c
+\input{newmethods_style}
+
+% A package Pollis needs for panels of its own, not one that reproduces a paper: its own header, key facts and credit
+\renewcommand{\nmdate}{28 October 2026}
+\fancyfoot[L]{\footnotesize\color{soft}\textbf{Pollis}\enspace Domain Packages\enspace·\enspace\nmtheme}
+\renewcommand{\nmhead}[3]{%
+  \renewcommand{\nmtheme}{#1}%
+  \thispagestyle{fancy}%
+  \begin{minipage}[c]{13mm}\pollislogo{11mm}\end{minipage}%
+  \begin{minipage}[c]{\dimexpr\linewidth-13mm\relax}
+    {\color{navy}\Large\bfseries Pollis}\enspace{\color{soft}Domain Packages}\hfill
+    {\color{deepamber}\small\bfseries\MakeUppercase{#1}}
+  \end{minipage}\par\vspace{7mm}
+  {\color{navy}\fontsize{22}{26}\selectfont\bfseries #2}\par\vspace{4pt}
+  {\color{soft}\large #3}\par\vspace{5mm}}
+\renewcommand{\factsheet}[4]{%
+  \begin{tcolorbox}[enhanced, colback=pale, colframe=pale, boxrule=0pt, sharp corners,
+    left=7pt, right=7pt, top=5pt, bottom=5pt, fontupper=\small]
+  \begin{tabularx}{\linewidth}{@{}>{\leavevmode\bfseries\color{navy}}p{27mm}>{\leavevmode}X@{}}
+  In Pollis & #1\\
+  Missing in Julia & #2\\
+  Package & #3\\
+  Tests & #4
+  \end{tabularx}
+  \end{tcolorbox}}
+\renewcommand{\nmcredit}{%
+  \par\vfill
+  \begin{minipage}[b]{0.78\linewidth}\footnotesize\color{soft}
+  Package written and tested with Claude Code (Anthropic) in Pollis.\par
+  \textcopyright\ 2026 Antonio Saragga Seabra\enspace·\enspace Licensed under \href{https://creativecommons.org/licenses/by-sa/4.0/}{CC BY-SA 4.0}\enspace·\enspace Draft, \nmdate
+  \end{minipage}\hfill
+  \begin{minipage}[b]{0.18\linewidth}\raggedleft\pollislogo{9mm}\par\vspace{2pt}{\footnotesize contact@pollis.org}\end{minipage}}
+
+\begin{document}
+\emergencystretch=3em
+
+\nmhead{Linear models}
+  {HARE: errors that change size, errors that remember}
+  {A regression whose errors grow with a regressor, or carry over from one period to the next, or both: how to
+   estimate it well, and how to tell which it is.}
+
+\factsheet
+  {\menupath{Model \gt Linear Models}: \emph{Linear Models with Heteroskedasticity}, \emph{Linear Models with
+   Autocorrelation} and \emph{Linear Models with Heteroskedasticity + AR(1)}. Each panel's Code Example runs the
+   package's estimators and tests on its data.}
+  {feasible GLS with a model of the variance (exponential, power, quadratic, linear, by group), by two-step or
+   iterated weighted least squares and by maximum likelihood; the AR(1) estimators of Prais and Winsten, Cochrane and
+   Orcutt, Hildreth and Lu, and Beach and MacKinnon; the two together; Harvey's and Glejser's tests. GLM.jl weighs
+   by weights you give it, and robust standard errors leave the estimates as they are.}
+  {\fn{HARE.jl} (Heteroskedasticity and Autocorrelation Estimators), from GitHub:
+   \fn{Pkg.add(url = "https://github.com/Trumpingtons/HARE.jl")}.}
+  {1,295 tests of every estimator and test; 30 against R (prais, orcutt, skedastic, nlme) on the same data, to
+   $10^{-8}$ or closer; 33 that recover the parameters from a million observations.}
+
+\nmsection{Why a package}
+Ordinary least squares stays unbiased when the errors are heteroskedastic or autocorrelated, but it is no longer the
+most precise estimator, and its standard errors are wrong. Robust (White, Newey--West) standard errors fix the second
+and leave the first. When the form of the variance or of the dependence is known, or can be estimated, generalized
+least squares fixes both. In R, these estimators are spread over prais, orcutt, nlme and skedastic; in Stata over
+\fn{prais} and \fn{hetregress}; in SAS most are in PROC AUTOREG. Julia had none of them, and Pollis' linear
+model panels needed all of them in one place, with the same interface, results that print as GLM.jl's do, and the
+estimate of the variance or of $\rho$ beside the coefficients.
+
+\nmsub{Where they are used}
+\begin{itemize}
+  \item \textbf{Cross sections whose spread grows with size.} Household spending varies more among the rich, firms'
+    costs more among large firms, regional outcomes more where the population is small: the variance is a function of
+    a regressor, the setting of \nmcite{harvey1976}{Harvey (1976)} and \nmcite{glejser1969}{Glejser (1969)}.
+  \item \textbf{Groups with variances of their own.} Countries, hospitals or survey waves measured with different
+    precision: one variance a group (\nmcite{greene2018}{Greene 2018}, §9.7.2).
+  \item \textbf{Time series with persistent errors.} Demand or a macroeconomic relation fitted to annual or quarterly
+    data, where a shock lasts beyond its period: AR(1) errors (\nmcite{co1949}{Cochrane and Orcutt 1949};
+    \nmcite{pw1954}{Prais and Winsten 1954}).
+  \item \textbf{Both at once.} A series whose shocks persist and whose volatility moves with a regressor; the
+    estimators of the third panel, for which we found no other implementation.
+\end{itemize}
+
+\nmsection{The method}
+The model is $y_i = \mathbf{x}_i^\top\boldsymbol\beta + u_i$, and the package estimates $\boldsymbol\beta$ with a
+model of $u_i$. Each function takes a formula and a table, \fn{f(@formula(y \textasciitilde{} x1 + x2), data; Z =
+@formula(0 \textasciitilde{} x1))}, or matrices without a column of ones, \fn{f(X, y; Z)}; $\mathbf{z}_i$, the
+regressors of the variance, are by default those of the mean.
+
+\nmsub{Heteroskedasticity: a model of the variance}
+\begin{valuetable}{@{}>{\raggedright\arraybackslash}p{24mm}>{\raggedright\arraybackslash}p{50mm}>{\raggedright\arraybackslash}X@{}}
+\textbf{Link} & \textbf{Variance} & \textbf{Functions}\\\midrule
+Exponential & $\sigma_i^2 = \exp(\gamma_0 + \mathbf{z}_i^\top\boldsymbol\gamma)$ \hfill Harvey & \fn{exponential\_fwls}, \fn{\_ifwls}, \fn{\_mle}\\
+Power & $\log\sigma_i^2 = \gamma_0 + \sum_j \gamma_j \log|z_{ij}|$ & \fn{power\_fwls}, \fn{\_ifwls}, \fn{\_mle}\\
+Quadratic & $\sigma_i = \gamma_0 + \mathbf{z}_i^\top\boldsymbol\gamma$ \hfill Glejser & \fn{quadratic\_fwls}, \fn{\_ifwls}, \fn{\_mle}\\
+Linear & $\sigma_i^2 = \gamma_0 + \mathbf{z}_i^\top\boldsymbol\gamma$ \hfill Breusch--Pagan & \fn{linear\_fwls}, \fn{\_ifwls}, \fn{\_mle}\\
+By group & $\sigma_i^2 = \sigma_g^2$ for $i$ in group $g$ & \fn{two\_step\_groupwise}, \fn{iterated\_groupwise}, \fn{groupwise\_mle}\\
+\end{valuetable}
+\emph{Two-step FWLS} fits OLS, regresses a function of the residuals on $\mathbf{z}_i$ (for the exponential link,
+$\log\hat u_i^2$, less $\mathrm{E}\log\chi^2_1 = -1.2704$, so that every $\gamma$ is consistent and not only the
+slopes), and refits by weighted least squares with weights $1/\hat\sigma_i^2$. It needs no optimizer and stays
+consistent when the errors are not normal. \emph{Iterated FWLS} repeats the last two steps until $\boldsymbol\beta$
+stops moving, and for the exponential link converges to the maximum likelihood estimate
+(\nmcite{ok1974}{Oberhofer and Kmenta 1974}). \emph{MLE} maximizes the normal likelihood over $\boldsymbol\beta$
+and $\boldsymbol\gamma$ together, by L-BFGS with ForwardDiff's gradients, started from the two-step estimate, and
+gives standard errors for $\boldsymbol\gamma$ from the Hessian.
+
+\nmsub{Autocorrelation: AR(1) errors, $u_t = \rho u_{t-1} + e_t$}
+\begin{itemize}
+  \item \textbf{Prais--Winsten} (\fn{two\_step\_prais\_winsten}, \fn{iterated\_prais\_winsten}): $\rho$ from the
+    residuals' first-order regression, then GLS on $y_t - \rho y_{t-1}$, keeping the first observation scaled by
+    $\sqrt{1-\rho^2}$.
+  \item \textbf{Cochrane--Orcutt} (\fn{two\_step\_cochrane\_orcutt}, \fn{iterated\_cochrane\_orcutt}): the same,
+    dropping the first observation.
+  \item \textbf{Hildreth--Lu} (\fn{hildreth\_lu}): the $\rho$ with the smallest sum of squares of the Cochrane--Orcutt
+    transform, on a grid of \fn{nrho = 200} points over $(-0.99, 0.99)$, about 0.01 apart; the global minimum on the
+    grid, even when the sum of squares has more than one (\nmcite{hl1960}{Hildreth and Lu 1960}).
+  \item \textbf{Beach--MacKinnon} (\fn{beach\_mackinnon}): the exact likelihood, $\frac12\log(1-\rho^2)$ included,
+    concentrated in $\rho$ and maximized by Brent's method (\nmcite{bm1978}{Beach and MacKinnon 1978}).
+\end{itemize}
+
+\nmsub{Both: AR(1) errors with an exponential variance}
+$u_t = \rho u_{t-1} + \sigma_t e_t$, $\log\sigma_t^2 = \gamma_0 + \mathbf{z}_t^\top\boldsymbol\gamma$.
+\emph{Sequential} (\fn{two\_step\_sequential}, \fn{iterated\_sequential}): Prais--Winsten first, then Harvey's
+regression on its residuals, then weighted least squares on the transformed data. \emph{Joint}
+(\fn{two\_step\_joint}, \fn{iterated\_joint}): the exact likelihood in $\rho$, $\boldsymbol\gamma$ and
+$\boldsymbol\beta$ together, with $\boldsymbol\beta$ concentrated out and $\rho = \tanh\xi$ to keep it inside
+$(-1, 1)$.
+
+\nmsub{Tests}
+\fn{harvey\_test} and \fn{glejser\_test}: score tests of $\boldsymbol\gamma = 0$ in the exponential and the quadratic
+link, $\chi^2$ with as many degrees of freedom as $\mathbf{z}_i$ has columns, as R's skedastic computes them.
+\fn{breusch\_pagan\_test} (\nmcite{bp1979}{Breusch and Pagan 1979}), \fn{white\_test}
+(\nmcite{white1980}{White 1980}), \fn{durbin\_watson\_test} and \fn{breusch\_godfrey\_test(f, data, p)}, from
+HypothesisTests.jl, on the same formula; \fn{wald\_test} and \fn{lrtest} between fitted models.
+
+\nmsection{A worked example}
+\nmsub{The data}
+Five hundred periods with both problems: $y_t = 1 + 2x_{1t} - x_{2t} + u_t$, $u_t = 0.7\,u_{t-1} + \sigma_t e_t$,
+$\log\sigma_t^2 = x_{1t}$, the first $u$ drawn from the stationary distribution, $x_1$, $x_2$ and $e$ standard normal
+from \fn{StableRNG(2026)}.
+\begin{nbox}{}
+\ttfamily\small
+using HARE, GLM, StableRNGs\\
+rng = StableRNG(2026); n = 500\\
+x1 = randn(rng, n); x2 = randn(rng, n); sigma = exp.(0.5 .* x1); e = randn(rng, n)\\
+u = zeros(n); u[1] = sigma[1] * e[1] / sqrt(1 - 0.7\^{}2)\\
+for t in 2:n; u[t] = 0.7 * u[t-1] + sigma[t] * e[t]; end\\
+data = (y = 1 .+ 2 .* x1 .- x2 .+ u, x1 = x1, x2 = x2)\\
+f = @formula(y \textasciitilde{} x1 + x2); Zf = @formula(0 \textasciitilde{} x1)
+\end{nbox}
+
+\nmsub{Which problem is it?}
+On the OLS residuals, \fn{durbin\_watson\_test(f, data)} gives DW $= 0.580$ (residual autocorrelation 0.710,
+$p < 10^{-56}$) and \fn{breusch\_godfrey\_test(f, data, 1)} $nR^2 = 253.4$. \fn{harvey\_test(f, data; Z = Zf)} gives
+LM $= 11.47$ on 1 degree of freedom, $p = 0.0007$: evidence of both, the autocorrelation much the stronger. The
+autocorrelation also weakens Harvey's test, whose residuals are not independent.
+
+\nmsub{Four estimators}
+\begin{valuetable}{@{}lccccc@{}}
+\textbf{Estimator} & \textbf{$x_1$ (2)} & \textbf{s.e.} & \textbf{$x_2$ ($-1$)} & \textbf{$\rho$ (0.7)} & \textbf{$\gamma_1$ (1)}\\\midrule
+OLS, \fn{lm(f, data)} & 2.178 & 0.088 & $-0.928$ & --- & ---\\
+\fn{iterated\_prais\_winsten} & 2.084 & 0.048 & $-0.981$ & 0.714 & ---\\
+\fn{exponential\_mle(...; Z = Zf)} & 2.105 & 0.083 & $-0.966$ & --- & 1.225\\
+\fn{iterated\_sequential(...; Z = Zf)} & 2.032 & 0.029 & $-0.985$ & 0.715 & 0.937\\
+\fn{iterated\_joint(...; Z = Zf)} & 2.027 & 0.030 & $-0.985$ & 0.704 & 1.016\\
+\end{valuetable}
+Each correction for one problem alone helps; the estimators of both recover $\rho$ and $\gamma_1$ and have standard
+errors of $x_1$ a third of OLS's and nearly two-thirds of Prais--Winsten's. The exponential MLE, which treats the
+errors as independent, finds a $\gamma_1$ inflated by the autocorrelation and a standard error of the intercept of
+0.085 against the joint estimator's 0.161. The joint estimator prints:
+\begin{nbox}{}
+\ttfamily\scriptsize
+\begin{tabular}{@{}lrrrrrr@{}}
+ & Coef. & Std. Error & t & Pr(>|t|) & Lower 95\% & Upper 95\%\\
+(Intercept) & 1.17089 & 0.160694 & 7.29 & <1e-11 & 0.855171 & 1.48662\\
+x1 & 2.02746 & 0.029653 & 68.37 & <1e-99 & 1.9692 & 2.08572\\
+x2 & $-0.985216$ & 0.0295266 & $-33.37$ & <1e-99 & $-1.04323$ & $-0.927203$\\[2pt]
+$\rho$ & 0.704261 & 0.0317495 & 22.18 & <1e-99 & 0.642033 & 0.766489\\[2pt]
+log $\sigma_0^2$ & 0.0761484 & 0.0632498 & 1.20 & 0.2286 & $-0.047819$ & 0.200116\\
+z1 & 1.0159 & 0.0638266 & 15.92 & <1e-56 & 0.890803 & 1.141\\
+\end{tabular}\\[3pt]
+Log-likelihood: $-266.5144$\quad Converged: true\quad Iterations: 7\quad N: 500\quad R\^{}2: 0.5955
+\end{nbox}
+The sequential estimator's $\boldsymbol\gamma$ comes from residuals after Prais--Winsten, which reach it with
+$\rho$ already estimated: its intercept, 0.33 against the joint 0.076, is not the variance's intercept of the model.
+Read $\boldsymbol\gamma$ from the joint estimator.
+
+\nmsection{What the tests show}
+\nmsub{Against R}
+Five hundred observations from \fn{StableRNG(42)} and \fn{StableRNG(99)}, written to CSV and read by R 4.5.1; the
+values R printed are kept in \fn{test/runtests\_r.jl}, so the tests need no R. The differences are those measured on
+Julia 1.13.1 today.
+\begin{valuetable}{@{}>{\raggedright\arraybackslash}p{42mm}>{\raggedright\arraybackslash}p{32mm}>{\raggedright\arraybackslash}p{46mm}>{\raggedright\arraybackslash}X@{}}
+\textbf{HARE} & \textbf{R} & \textbf{Value} & \textbf{Largest difference}\\\midrule
+\fn{iterated\_prais\_winsten} & prais 1.1.4 & $\hat\rho = 0.747516$ & $\beta$ 6.0e-10, $\rho$ 6.7e-16\\
+\fn{two\_step\_prais\_winsten} & prais, \fn{twostep = TRUE} & $\hat\rho = 0.741971$ & $\beta$ 5.4e-15, $\rho$ 6.7e-16\\
+\fn{iterated\_cochrane\_orcutt} & orcutt 2.3 & $\hat\rho = 0.747510$ & $\beta$ 4.5e-10, $\rho$ 5.6e-16\\
+\fn{beach\_mackinnon} & nlme 3.1.168, \fn{corAR1}, ML & $\hat\rho = 0.746041$ & $\beta$ 1.7e-9, $\rho$ 2.2e-8\\
+\fn{harvey\_test} & skedastic 2.0.3 & LM 122.0117; 1.1127 & 2.8e-13; 3.7e-13\\
+\fn{glejser\_test} & skedastic 2.0.3 & LM 188.1612; 0.8859 & 4.0e-13; 3.9e-13\\
+\fn{exponential\_mle} & nlme, \fn{varExp} & $\hat\gamma_1 = 1.080067$, $\ell = -694.6695$ & $\beta$ 4.3e-11, $\gamma$ 1.1e-9\\
+\fn{power\_mle} & nlme, \fn{varPower} & $\hat\gamma_1 = 0.954741$, $\ell = -565.8042$ & $\beta$ 1.5e-9, $\gamma$ 4.2e-8\\
+\fn{groupwise\_mle} & nlme, \fn{varIdent} & $\hat\sigma^2 = 0.274, 0.758, 1.950, 3.171$ & $\beta$ 4.2e-7, $\sigma^2$ 5.8e-5\\
+\end{valuetable}
+nlme maximizes the AR(1) likelihood by Newton--Raphson and HARE by Brent's method on the concentrated likelihood; they
+agree to $2\times10^{-8}$ in $\rho$. nlme writes the exponential and power variances as $\sigma^2 e^{2\delta x}$ and
+$\sigma^2|x|^{2\delta}$, so $\gamma_1 = 2\delta$.
+
+\nmsub{Large samples}
+With a million observations from \fn{StableRNG(123)}, 33 tests check that the two-step FWLS of each link, the MLEs, the
+four AR(1) estimators, the groupwise estimators and the sequential and joint estimators recover $\boldsymbol\beta$,
+$\boldsymbol\gamma$, $\rho$ and the group variances within 0.01 (\fn{test/runtests\_consistency.jl}, 91 seconds).
+
+\nmsub{The rest}
+\fn{test/runtests.jl}, 1,295 tests in 30 sets, on 200 observations with known parameters: each estimator by formula and
+by matrix, two-step against iterated, the coefficient names, \fn{predict} on new data, the Wald and likelihood-ratio
+tests, and t or normal inference.
+
+\nmsection{Still open}
+\begin{itemize}
+  \item \textbf{No second implementation for some.} Hildreth--Lu, the FWLS estimators and the sequential and joint
+    estimators are checked by recovering known parameters, not against another program: R has no Hildreth--Lu grid
+    search (HoRM evaluates one $\rho$), and we found no implementation of AR(1) errors with a model of the variance.
+    SAS's PROC AUTOREG, with \fn{HETERO} and \fn{NLAG=1}, would be the comparison.
+  \item \textbf{One variance link with AR(1).} The sequential and joint estimators have the exponential link only.
+  \item \textbf{Panels.} HARE is for one cross section or one series; R's prais and Stata's \fn{xtgls} correct panels.
+  \item \textbf{A published table.} Like the other packages in Pollis, HARE should be run on a published dataset whose
+    printed results it can be compared with, such as the examples of \nmcite{greene2018}{Greene (2018)}, chapters 9
+    and 20.
+\end{itemize}
+
+\nmsection{References}
+{\footnotesize\sloppy
+\nmref{bm1978}{Beach, C.\,M. and MacKinnon, J.\,G. (1978). A maximum likelihood procedure for regression with autocorrelated errors. \emph{Econometrica} 46(1), 51--58. \nmdoi{10.2307/1913644}}
+\nmref{bp1979}{Breusch, T.\,S. and Pagan, A.\,R. (1979). A simple test for heteroscedasticity and random coefficient variation. \emph{Econometrica} 47(5), 1287--1294. \nmdoi{10.2307/1911963}}
+\nmref{co1949}{Cochrane, D. and Orcutt, G.\,H. (1949). Application of least squares regression to relationships containing auto-correlated error terms. \emph{Journal of the American Statistical Association} 44(245), 32--61. \nmdoi{10.1080/01621459.1949.10483290}}
+\nmref{glejser1969}{Glejser, H. (1969). A new test for heteroskedasticity. \emph{Journal of the American Statistical Association} 64(325), 316--323. \nmdoi{10.1080/01621459.1969.10500976}}
+\nmref{greene2018}{Greene, W.\,H. (2018). \emph{Econometric Analysis}, 8th edition. Pearson.}
+\nmref{harvey1976}{Harvey, A.\,C. (1976). Estimating regression models with multiplicative heteroscedasticity. \emph{Econometrica} 44(3), 461--465. \nmdoi{10.2307/1913974}}
+\nmref{hl1960}{Hildreth, C. and Lu, J.\,Y. (1960). Demand relations with autocorrelated disturbances. Technical Bulletin 276, Michigan State University Agricultural Experiment Station.}
+\nmref{ok1974}{Oberhofer, W. and Kmenta, J. (1974). A general procedure for obtaining maximum likelihood estimates in generalized regression models. \emph{Econometrica} 42(3), 579--590. \nmdoi{10.2307/1911793}}
+\nmref{pw1954}{Prais, S.\,J. and Winsten, C.\,B. (1954). Trend estimators and serial correlation. Cowles Commission Discussion Paper 383, Chicago.}
+\nmref{white1980}{White, H. (1980). A heteroskedasticity-consistent covariance matrix estimator and a direct test for heteroskedasticity. \emph{Econometrica} 48(4), 817--838. \nmdoi{10.2307/1912934}}
+\nmref{software}{Software: Mohr, F.\,X., prais (R); Spada, S., orcutt (R); Farrar, T.\,J., skedastic (R); Pinheiro, J., Bates, D. and R Core Team, nlme (R); GLM.jl, HypothesisTests.jl, Optim.jl and ForwardDiff.jl (MIT).}
+}
+
+\nmcredit
+\end{document}
