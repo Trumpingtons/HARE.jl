@@ -16,7 +16,7 @@ b = [1.0, 2.0, -1.0];              # beta true parameters</code></pre><h2 id="Ex
 \end{aligned}\]</p><p>We simulate data with log variance proportional to <span>$|\mathbf{x}_1|$</span> and <span>$\sigma_0=1$</span>.</p><pre><code class="language-julia hljs">sigma_0 = 1.0;
 gamma   = [1.0, 0.0];
 sigma_exp = sigma_0 * exp.((gamma[1] .* abs.(x1) .+ gamma[2] .* x2) ./ 2);</code></pre><p>The simulated dataset (<span>$data$</span>) is</p><pre><code class="language-julia hljs">y    = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ sigma_exp .* randn(nobs);
-data = (y = y, x1 = x1, x2 = x2);</code></pre><p><strong>MLE</strong> (<code>exponential_mle</code>): jointly maximises the log-likelihood over <span>$(\boldsymbol{\beta}, \boldsymbol{\gamma})$</span> via L-BFGS, warm-started from the Harvey auxiliary regression. Equivalent to R&#39;s <code>nlme::gls(weights = varComb(varExp(...)))</code>.</p><p><code>exponential_mle(formula, data; Z=nothing) -&gt; HeteroMLEResult</code></p><pre><code class="language-julia hljs">exponential_mle(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
+data = (y = y, x1 = x1, x2 = x2);</code></pre><p><strong>MLE</strong> (<code>exponential_mle</code>): jointly maximises the log-likelihood over <span>$(\boldsymbol{\beta}, \boldsymbol{\gamma})$</span> via L-BFGS, warm-started from the Harvey auxiliary regression. Equivalent to R&#39;s <code>nlme::gls(weights = varComb(varExp(...)))</code>.</p><p><code>exponential_mle(formula, data; Z=nothing) -&gt; MLEResult</code></p><pre><code class="language-julia hljs">exponential_mle(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
 ─────────────────────────────────────────────────────────────────────────
                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ─────────────────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ z2       -0.095787    0.0637538  -1.50    0.1330  -0.220742  0.0291681
 ──────────────────────────────────────────────────────────────────────
 Log-likelihood: -927.5787   Converged: true   Iterations: 10
 N: 500   R^2: 0.617   Adj. R^2: 0.6154
-</code></pre><p><strong>Two-step FWLS</strong> (<code>exponential_fwls</code>): a closed-form alternative that requires no numerical optimisation. Preferable when MLE fails to converge or when the normality assumption is in doubt, since FWLS is consistent under any error distribution with the correct variance model.</p><p><code>exponential_fwls(formula, data; Z=nothing) -&gt; ExponentialFWLSResult</code></p><pre><code class="language-julia hljs">exponential_fwls(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
+</code></pre><p><strong>Two-step FWLS</strong> (<code>exponential_fwls</code>): a closed-form alternative that requires no numerical optimisation. Preferable when MLE fails to converge or when the normality assumption is in doubt, since FWLS is consistent under any error distribution with the correct variance model.</p><p><code>exponential_fwls(formula, data; Z=nothing) -&gt; FWLSResult</code></p><pre><code class="language-julia hljs">exponential_fwls(@formula(y ~ x1 + x2), data; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
 ─────────────────────────────────────────────────────────────────────────
                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ─────────────────────────────────────────────────────────────────────────
@@ -411,16 +411,16 @@ z2        7.49778e-5  0.00141193    0.05    0.9576  -0.00269235   0.0028423
 ─────────────────────────────────────────────────────────────────────────────
 Log-likelihood: -1.4174502441e6   Converged: true   Iterations: 13
 N: 1000000   R^2: 0.7534   Adj. R^2: 0.7534
-</code></pre><h2 id="Combined-AR(1)-Heteroskedasticity"><a class="docs-heading-anchor" href="#Combined-AR(1)-Heteroskedasticity">Combined AR(1) + Heteroskedasticity</a><a id="Combined-AR(1)-Heteroskedasticity-1"></a><a class="docs-heading-anchor-permalink" href="#Combined-AR(1)-Heteroskedasticity" title="Permalink"></a></h2><p>The DGP is <span>$u_t = \rho\, u_{t-1} + \sigma_t\, \varepsilon_t$</span> with Harvey-type heteroskedasticity in the innovations. True parameters: <span>$\rho = 0.7$</span>, <span>$\boldsymbol{\gamma} = [1,\, 0]$</span> (reusing <code>sigma_exp</code> from the Exponential Variance section above).</p><p>The Sequential estimator runs the Harvey auxiliary regression on the Prais-Winsten transformed regressors <span>$\mathbf{X}^*$</span>, so its reported <span>$\boldsymbol{\gamma}$</span> refers to that transformed system and will only approximately match the true values.  The Joint estimator uses the original regressors and exact MLE, so its <span>$\boldsymbol{\gamma}$</span> should be close to <span>$[1, 0]$</span>.</p><pre><code class="language-julia hljs">u_hae = zeros(nobs);
+</code></pre><h2 id="Combined-AR(1)-Heteroskedasticity"><a class="docs-heading-anchor" href="#Combined-AR(1)-Heteroskedasticity">Combined AR(1) + Heteroskedasticity</a><a id="Combined-AR(1)-Heteroskedasticity-1"></a><a class="docs-heading-anchor-permalink" href="#Combined-AR(1)-Heteroskedasticity" title="Permalink"></a></h2><p>The DGP is <span>$u_t = \rho\, u_{t-1} + \sigma_t\, \varepsilon_t$</span> with Harvey-type heteroskedasticity in the innovations. True parameters: <span>$\rho = 0.7$</span>, <span>$\boldsymbol{\gamma} = [1,\, 0]$</span> on <span>$(|x_1|, x_2)$</span> (reusing <code>sigma_exp</code> from the Exponential Variance section above).</p><p>Both estimators run the log-variance regression in the original space: the Sequential estimator regresses the log squared Prais-Winsten residuals on <span>$\mathbf{Z}$</span>, since the innovations <span>$\sigma_t \varepsilon_t$</span> have variance <span>$\sigma_0^2 \exp(\mathbf{z}_t^\top \boldsymbol{\gamma})$</span>; the Joint estimator maximises the exact likelihood. As in the sections above, <code>Z = [|x1|, x2]</code> is passed, so both report <span>$\boldsymbol{\gamma}$</span> for the variables the variance depends on.</p><pre><code class="language-julia hljs">u_hae = zeros(nobs);
 for t in 2:nobs; u_hae[t] = 0.7 * u_hae[t-1] + sigma_exp[t] * eps[t]; end
 y_hae    = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ u_hae;
-data_hae = (y = y_hae, x1 = x1, x2 = x2);</code></pre><p><strong>Sequential HARE</strong> – corrects for AR(1) first, then heteroskedasticity:</p><pre><code class="language-julia hljs">two_step_sequential(@formula(y ~ x1 + x2), data_hae)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+data_hae = (y = y_hae, x1 = x1, x2 = x2);</code></pre><p><strong>Sequential HARE</strong> – corrects for AR(1) first, then heteroskedasticity:</p><pre><code class="language-julia hljs">two_step_sequential(@formula(y ~ x1 + x2), data_hae; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
 ──────────────────────────────────────────────────────────────────────────
                  Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   1.12074    0.398607     2.81    0.0051   0.337578    1.9039
-x1            1.97418    0.0761599   25.92    &lt;1e-93   1.82454     2.12381
-x2           -0.956121   0.0789269  -12.11    &lt;1e-29  -1.11119    -0.80105
+(Intercept)   1.0166     0.331721     3.06    0.0023   0.364854   1.66835
+x1            1.9606     0.0757041   25.90    &lt;1e-93   1.81186    2.10933
+x2           -0.955632   0.0655662  -14.58    &lt;1e-39  -1.08445   -0.826811
 ──────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
 ──────────────────────────────────────────────────────────────
@@ -429,38 +429,38 @@ AR(1) coefficient:
 ρ  0.745123   0.0298259  24.98    &lt;1e-99   0.686666   0.803581
 ──────────────────────────────────────────────────────────────
 Log-variance equation (gamma):
-────────────────────────────────────────────────────────────────────────
-              Coef.  Std. Error      z  Pr(&gt;|z|)    Lower 95%  Upper 95%
-────────────────────────────────────────────────────────────────────────
-log σ₀²   0.770468    0.107988    7.13    &lt;1e-12   0.558817     0.98212
-z1       -0.0298522   0.0994588  -0.30    0.7641  -0.224788     0.165083
-z2        0.20556     0.105997    1.94    0.0525  -0.00219074   0.413312
-────────────────────────────────────────────────────────────────────────
-N: 500   R^2: 0.5242   Adj. R^2: 0.5223
-</code></pre><p><strong>Joint HARE</strong> – estimates AR(1) and heteroskedasticity simultaneously:</p><pre><code class="language-julia hljs">two_step_joint(@formula(y ~ x1 + x2), data_hae)</code></pre><pre><code class="nohighlight hljs">Coefficients:
+─────────────────────────────────────────────────────────────────────
+             Coef.  Std. Error     z  Pr(&gt;|z|)   Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────────────
+log σ₀²  0.0337159    0.173542  0.19    0.8460  -0.30642     0.373852
+z1       0.857706     0.160573  5.34    &lt;1e-07   0.542989    1.17242
+z2       0.143196     0.10375   1.38    0.1675  -0.0601497   0.346542
+─────────────────────────────────────────────────────────────────────
+N: 500   R^2: 0.5228   Adj. R^2: 0.5209
+</code></pre><p><strong>Joint HARE</strong> – estimates AR(1) and heteroskedasticity simultaneously:</p><pre><code class="language-julia hljs">two_step_joint(@formula(y ~ x1 + x2), data_hae; Z = @formula(0 ~ abs(x1) + x2))</code></pre><pre><code class="nohighlight hljs">Coefficients:
 ──────────────────────────────────────────────────────────────────────────
                  Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   1.13175    0.271743     4.16    &lt;1e-04   0.597846    1.66566
-x1            1.97398    0.0516019   38.25    &lt;1e-99   1.8726      2.07537
-x2           -0.964105   0.0548852  -17.57    &lt;1e-53  -1.07194    -0.85627
+(Intercept)   1.04166     0.234634    4.44    &lt;1e-04   0.580665   1.50266
+x1            1.96357     0.055024   35.69    &lt;1e-99   1.85547    2.07168
+x2           -0.964916    0.049563  -19.47    &lt;1e-62  -1.06229   -0.867537
 ──────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
-──────────────────────────────────────────────────────────────
-      Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
-──────────────────────────────────────────────────────────────
-ρ  0.746719    0.029746  25.10    &lt;1e-99   0.688418    0.80502
-──────────────────────────────────────────────────────────────
+─────────────────────────────────────────────────────────────
+     Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+─────────────────────────────────────────────────────────────
+ρ  0.73498    0.030325  24.24    &lt;1e-99   0.675544   0.794416
+─────────────────────────────────────────────────────────────
 Log-variance equation (gamma):
-────────────────────────────────────────────────────────────────────────
-               Coef.  Std. Error      z  Pr(&gt;|z|)   Lower 95%  Upper 95%
-────────────────────────────────────────────────────────────────────────
-log σ₀²   0.866203     0.0634286  13.66    &lt;1e-41   0.741885    0.990521
-z1       -0.00414998   0.0450442  -0.09    0.9266  -0.0924349   0.084135
-z2        0.0454146    0.0703273   0.65    0.5184  -0.0924245   0.183254
-────────────────────────────────────────────────────────────────────────
-Log-likelihood: -467.4608
-N: 500   R^2: 0.5243   Adj. R^2: 0.5223
+──────────────────────────────────────────────────────────────────────
+              Coef.  Std. Error     z  Pr(&gt;|z|)   Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────
+log σ₀²  0.1395       0.108134   1.29    0.1970  -0.0724395   0.351439
+z1       0.712469     0.101468   7.02    &lt;1e-11   0.513596    0.911342
+z2       0.00611855   0.0678506  0.09    0.9281  -0.126866    0.139103
+──────────────────────────────────────────────────────────────────────
+Log-likelihood: -439.3689
+N: 500   R^2: 0.5234   Adj. R^2: 0.5214
 </code></pre><h2 id="Heteroskedasticity-Tests"><a class="docs-heading-anchor" href="#Heteroskedasticity-Tests">Heteroskedasticity Tests</a><a id="Heteroskedasticity-Tests-1"></a><a class="docs-heading-anchor-permalink" href="#Heteroskedasticity-Tests" title="Permalink"></a></h2><p>HARE provides two score (LM) tests for heteroskedasticity that are unique to the package.  Both test <span>$H_0\colon \gamma = 0$</span> (homoskedasticity) and are distributed as <span>$\chi^2(p)$</span> under <span>$H_0$</span>, where <span>$p$</span> is the number of variance regressors (columns of <span>$Z$</span> excluding the intercept).</p><p>We reuse the exponential-variance dataset from the first section (<span>$n = 500$</span>, <span>$\log\sigma_i^2 = x_{1i}$</span>), so both tests should reject strongly. The R equivalents are <code>skedastic::harvey()</code> and <code>skedastic::glejser()</code>.</p><p><strong>Harvey test</strong> – LM statistic <span>$\text{ESS}/\text{trigamma}(1/2)$</span> from the auxiliary regression of <span>$\log\hat{u}_i^2$</span> on <span>$Z$</span>:</p><pre><code class="language-julia hljs">y_test   = b[1] .+ b[2] .* x1 .+ b[3] .* x2 .+ sigma_exp .* randn(nobs);
 data_test = (y = y_test, x1 = x1, x2 = x2);
 
@@ -470,4 +470,4 @@ harvey_test(@formula(y ~ x1 + x2), data_test)</code></pre><pre><code class="nohi
 </code></pre><p><strong>Glejser test</strong> – LM statistic from the auxiliary regression of <span>$|\hat{u}_i|$</span> on <span>$Z$</span>:</p><pre><code class="language-julia hljs">glejser_test(@formula(y ~ x1 + x2), data_test)</code></pre><pre><code class="nohighlight hljs">Glejser test for heteroskedasticity (quadratic link / linear SD)
   H₀: γ = 0  in  σᵢ = γ₀ + zᵢ&#39;γ
   LM = 2.3974   df = 2   p-value = 0.3016
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 28 October 2026 17:25">Wednesday 28 October 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 28 October 2026 17:43">Wednesday 28 October 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
