@@ -56,6 +56,8 @@ end
 function _hetero_mle_core(X_full, Z_full, y, link, theta0; tol, maxiter)
     n   = length(y)
     nll = theta -> _hetero_negloglik(theta, X_full, Z_full, y, link)
+    # nll sums n terms, so its gradient grows with n: tol applies per observation
+    g_tol = tol * n
     if link === :linear
         k  = size(X_full, 2)
         np = length(theta0)
@@ -63,9 +65,9 @@ function _hetero_mle_core(X_full, Z_full, y, link, theta0; tol, maxiter)
         ub = fill(Inf, np)
         g! = (G, theta) -> ForwardDiff.gradient!(G, nll, theta)
         res = optimize(nll, g!, lb, ub, theta0, Fminbox(LBFGS()),
-                       Optim.Options(iterations=maxiter, g_tol=tol))
+                       Optim.Options(iterations=maxiter, g_tol=g_tol))
     else
-        res = optimize(nll, theta0, LBFGS(), Optim.Options(iterations=maxiter, g_tol=tol);
+        res = optimize(nll, theta0, LBFGS(), Optim.Options(iterations=maxiter, g_tol=g_tol);
                        autodiff=:forward)
     end
     theta_hat = Optim.minimizer(res)
@@ -122,7 +124,7 @@ Corresponds to SAS `PROC AUTOREG HETERO LINK=EXP`.
               prepended internally.
 - `formula` : `@formula` expression (formula method).
 - `data`    : Tables.jl-compatible data source (formula method).
-- `tol`     : gradient norm tolerance for L-BFGS convergence (default `1e-10`).
+- `tol`     : gradient norm tolerance for L-BFGS convergence, per observation (default `1e-10`).
 - `maxiter` : maximum number of L-BFGS iterations (default `1000`).
 
 # Returns
@@ -176,7 +178,7 @@ Corresponds to SAS `PROC AUTOREG HETERO LINK=SQUARE`.
               prepended internally.
 - `formula` : `@formula` expression (formula method).
 - `data`    : Tables.jl-compatible data source (formula method).
-- `tol`     : gradient norm tolerance for L-BFGS convergence (default `1e-10`).
+- `tol`     : gradient norm tolerance for L-BFGS convergence, per observation (default `1e-10`).
 - `maxiter` : maximum number of L-BFGS iterations (default `1000`).
 
 # Returns
@@ -230,7 +232,7 @@ Corresponds to SAS `PROC AUTOREG HETERO LINK=LINEAR`.
               prepended internally.
 - `formula` : `@formula` expression (formula method).
 - `data`    : Tables.jl-compatible data source (formula method).
-- `tol`     : gradient norm tolerance for L-BFGS convergence (default `1e-10`).
+- `tol`     : gradient norm tolerance for L-BFGS convergence, per observation (default `1e-8`).
 - `maxiter` : maximum number of L-BFGS iterations (default `1000`).
 
 # Returns
@@ -279,7 +281,7 @@ exact (from the observed information matrix), with no delta-method approximation
               A constant is prepended internally. **Required** for the power model.
 - `formula` : `@formula` expression (formula method).
 - `data`    : Tables.jl-compatible data source (formula method).
-- `tol`     : gradient norm tolerance for L-BFGS convergence (default `1e-10`).
+- `tol`     : gradient norm tolerance for L-BFGS convergence, per observation (default `1e-10`).
 - `maxiter` : maximum number of L-BFGS iterations (default `1000`).
 
 # Returns
