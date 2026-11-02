@@ -1,9 +1,9 @@
-% Pollis Domain Packages: Heteroskedasticity and AR(1) errors (HARE.jl) -- draft 1 (28 October 2026)
+% Pollis Domain Packages: Heteroskedasticity and AR(1) errors (HARE.jl) -- draft 2 (2 November 2026)
 % Compile with: latexmk -pdf HARE.tex && latexmk -c
 \input{newmethods_style}
 
 % A package Pollis needs for panels of its own, not one that reproduces a paper: its own header, key facts and credit
-\renewcommand{\nmdate}{28 October 2026}
+\renewcommand{\nmdate}{2 November 2026}
 \fancyfoot[L]{\footnotesize\color{soft}\textbf{Pollis}\enspace Domain Packages\enspace·\enspace\nmtheme}
 \renewcommand{\nmhead}[3]{%
   \renewcommand{\nmtheme}{#1}%
@@ -51,8 +51,8 @@
    by weights you give it, and robust standard errors leave the estimates as they are.}
   {\fn{HARE.jl} (Heteroskedasticity and Autocorrelation Estimators), from GitHub:
    \fn{Pkg.add(url = "https://github.com/Trumpingtons/HARE.jl")}.}
-  {1,295 tests of every estimator and test; 30 against R (prais, orcutt, skedastic, nlme) on the same data, to
-   $10^{-8}$ or closer; 33 that recover the parameters from a million observations.}
+  {1,335 tests of every estimator and test; 65 against R (prais, orcutt, skedastic, nlme, crch, lm) on the same data;
+   33 that recover the parameters from a million observations.}
 
 \nmsection{Why a package}
 Ordinary least squares stays unbiased when the errors are heteroskedastic or autocorrelated, but it is no longer the
@@ -100,6 +100,13 @@ stops moving, and for the exponential link converges to the maximum likelihood e
 (\nmcite{ok1974}{Oberhofer and Kmenta 1974}). \emph{MLE} maximizes the normal likelihood over $\boldsymbol\beta$
 and $\boldsymbol\gamma$ together, by L-BFGS with ForwardDiff's gradients, started from the two-step estimate, and
 gives standard errors for $\boldsymbol\gamma$ from the Hessian.
+
+The FWLS standard errors of $\boldsymbol\beta$ are those of the weighted fit, conditional on the weights:
+$\hat\sigma^2(\mathbf{X}^\top\mathbf{W}\mathbf{X})^{-1}$ with $\hat\sigma^2 = \sum_i w_i\hat e_i^2/(n-k)$, as in R's
+\fn{lm}, so they scale with the units of $y$. In the quadratic and linear links a fitted value can fall to zero or
+below, and no weight exists for such a row. FWLS and MLE then stop with an error that gives the number of rows and
+points to the exponential or power link, or OLS with robust standard errors. A value below $10^{-6}$ of the mean fitted
+value counts as zero.
 
 \nmsub{Autocorrelation: AR(1) errors, $u_t = \rho u_{t-1} + e_t$}
 \begin{itemize}
@@ -157,13 +164,13 @@ autocorrelation also weakens Harvey's test, whose residuals are not independent.
 \textbf{Estimator} & \textbf{$x_1$ (2)} & \textbf{s.e.} & \textbf{$x_2$ ($-1$)} & \textbf{$\rho$ (0.7)} & \textbf{$\gamma_1$ (1)}\\\midrule
 OLS, \fn{lm(f, data)} & 2.178 & 0.088 & $-0.928$ & --- & ---\\
 \fn{iterated\_prais\_winsten} & 2.084 & 0.048 & $-0.981$ & 0.714 & ---\\
-\fn{exponential\_mle(...; Z = Zf)} & 2.105 & 0.083 & $-0.966$ & --- & 1.225\\
-\fn{iterated\_sequential(...; Z = Zf)} & 2.032 & 0.029 & $-0.985$ & 0.715 & 0.937\\
+\fn{exponential\_mle(...; Z = Zf)} & 2.105 & 0.083 & $-0.966$ & --- & 0.327\\
+\fn{iterated\_sequential(...; Z = Zf)} & 2.032 & 0.031 & $-0.985$ & 0.715 & 0.937\\
 \fn{iterated\_joint(...; Z = Zf)} & 2.027 & 0.030 & $-0.985$ & 0.704 & 1.016\\
 \end{valuetable}
 Each correction for one problem alone helps; the estimators of both recover $\rho$ and $\gamma_1$ and have standard
 errors of $x_1$ a third of OLS's and nearly two-thirds of Prais--Winsten's. The exponential MLE, which treats the
-errors as independent, finds a $\gamma_1$ inflated by the autocorrelation and a standard error of the intercept of
+errors as independent, finds a $\gamma_1$ of 0.327 against the true 1, and a standard error of the intercept of
 0.085 against the joint estimator's 0.161. The joint estimator prints:
 \begin{nbox}{}
 \ttfamily\scriptsize
@@ -198,34 +205,64 @@ Julia 1.13.1 today.
 \fn{exponential\_mle} & nlme, \fn{varExp} & $\hat\gamma_1 = 1.080067$, $\ell = -694.6695$ & $\beta$ 4.3e-11, $\gamma$ 1.1e-9\\
 \fn{power\_mle} & nlme, \fn{varPower} & $\hat\gamma_1 = 0.954741$, $\ell = -565.8042$ & $\beta$ 1.5e-9, $\gamma$ 4.2e-8\\
 \fn{groupwise\_mle} & nlme, \fn{varIdent} & $\hat\sigma^2 = 0.274, 0.758, 1.950, 3.171$ & $\beta$ 4.2e-7, $\sigma^2$ 5.8e-5\\
+\fn{quadratic\_mle} & crch 1.2.3, identity link & $\hat\gamma_1 = 0.504708$, $\ell = -818.0891$ & $\beta$ 1.2e-8, $\gamma$ 4.6e-9\\
 \end{valuetable}
 nlme maximizes the AR(1) likelihood by Newton--Raphson and HARE by Brent's method on the concentrated likelihood; they
 agree to $2\times10^{-8}$ in $\rho$. nlme writes the exponential and power variances as $\sigma^2 e^{2\delta x}$ and
-$\sigma^2|x|^{2\delta}$, so $\gamma_1 = 2\delta$.
+$\sigma^2|x|^{2\delta}$, so $\gamma_1 = 2\delta$. At its tightest setting nlme's group variances still miss the
+condition of the maximum, $\hat\sigma_g^2 = \mathrm{RSS}_g/n_g$, by up to $5\times10^{-5}$ on data of 5,000
+observations, where HARE's meet it to $10^{-15}$.
+
+\nmsub{Estimates and standard errors against R}
+The same data on both sides, each side with its own code: R 4.5.1, nlme 3.1.171, prais 1.2.0, orcutt 2.3, crch 1.2.3, Julia 1.13.1.
+Each table gives $x_1$ in full and, for the three coefficients, the largest difference. First the estimators R can run
+from start to finish.
+\begin{valuetable}{@{}>{\raggedright\arraybackslash}p{39mm}>{\raggedright\arraybackslash}Xcccc>{\raggedright\arraybackslash}p{32mm}@{}}
+\textbf{HARE} & \textbf{R} & \textbf{$x_1$ HARE} & \textbf{$x_1$ R} & \textbf{s.e. HARE} & \textbf{s.e. R} & \textbf{Largest diff.}\\\midrule
+\fn{exponential\_mle} & \fn{gls}, \fn{varExp} & 1.993399 & 1.993399 & 0.031057 & 0.031127 & $\beta$ 5.8e-11, s.e. 1.3e-4\\
+\fn{power\_mle} & \fn{gls}, \fn{varPower} & 2.115026 & 2.115026 & 0.048315 & 0.048390 & $\beta$ 1.5e-9, s.e. 7.5e-5\\
+\fn{groupwise\_mle} & \fn{gls}, \fn{varIdent} & 1.974048 & 1.974048 & 0.036187 & 0.036296 & $\beta$ 4.2e-7, s.e. 1.1e-4\\
+\fn{quadratic\_mle} & crch, identity link & 2.004756 & 2.004756 & 0.069204 & 0.069204 & $\beta$ 1.2e-8, s.e. 2.1e-9\\
+\fn{beach\_mackinnon} & \fn{gls}, \fn{corAR1} & 2.000847 & 2.000847 & 0.032530 & 0.032530 & $\beta$ 1.7e-9, s.e. 1.4e-8\\
+\fn{iterated\_prais\_winsten} & prais & 2.000888 & 2.000888 & 0.032507 & 0.032507 & $\beta$ 6.0e-10, s.e. 5.2e-9\\
+\fn{two\_step\_prais\_winsten} & prais & 2.000733 & 2.000733 & 0.032595 & 0.032595 & $\beta$ 5.0e-15, s.e. 1.0e-15\\
+\fn{iterated\_cochrane\_orcutt} & orcutt & 2.000953 & 2.000953 & 0.032542 & 0.032542 & $\beta$ 4.5e-10, s.e. 4.7e-9\\
+\end{valuetable}
+The three likelihood estimators give standard errors a little below nlme's. For \fn{groupwise\_mle} the ratio is
+0.99700, which is $\sqrt{(n-k)/n}$ and consistent with a degrees-of-freedom correction in nlme. For the exponential and
+power links, where HARE's come from the joint Hessian, the ratios are 0.99777 and 0.99846.
+
+We found no R function for FWLS as a whole, so the next table compares its weighted fit: R's \fn{lm} receives the same
+data and HARE's weights, and, for the sequential estimators, HARE's transformed data. It checks the fit and its
+standard errors, not the estimate of the weights. The quadratic and linear rows use $Z = 1 + |x_1|$, because on these
+data $Z = x_1$ gives fitted values below zero and both stop with the error above.
+\begin{valuetable}{@{}>{\raggedright\arraybackslash}Xcccc>{\raggedright\arraybackslash}p{35mm}@{}}
+\textbf{HARE, against \fn{lm(...; weights = w)}} & \textbf{$x_1$ HARE} & \textbf{$x_1$ R} & \textbf{s.e. HARE} & \textbf{s.e. R} & \textbf{Largest diff.}\\\midrule
+\fn{exponential\_fwls} & 1.993232 & 1.993232 & 0.030998 & 0.030998 & $\beta$ 5.9e-15, s.e. 5.6e-17\\
+\fn{exponential\_ifwls} & 1.993378 & 1.993378 & 0.031110 & 0.031110 & $\beta$ 1.7e-11, s.e. 8.0e-12\\
+\fn{power\_fwls} & 1.947179 & 1.947179 & 0.058686 & 0.058686 & $\beta$ 2.2e-15, s.e. 1.4e-17\\
+\fn{power\_ifwls} & 1.947097 & 1.947097 & 0.058670 & 0.058670 & $\beta$ 2.3e-10, s.e. 4.6e-11\\
+\fn{quadratic\_fwls} & 1.989685 & 1.989685 & 0.065363 & 0.065363 & $\beta$ 1.3e-15, s.e. 2.1e-17\\
+\fn{quadratic\_ifwls} & 1.989642 & 1.989642 & 0.065354 & 0.065354 & $\beta$ 2.7e-15, s.e. 2.1e-17\\
+\fn{linear\_fwls} & 2.017984 & 2.017984 & 0.077288 & 0.077288 & $\beta$ 1.3e-15, s.e. 2.8e-17\\
+\fn{linear\_ifwls} & 2.021275 & 2.021275 & 0.078790 & 0.078790 & $\beta$ 6.1e-11, s.e. 1.3e-11\\
+\fn{two\_step\_groupwise} & 1.972670 & 1.972670 & 0.036595 & 0.036595 & $\beta$ 1.6e-14, s.e. 2.6e-16\\
+\fn{iterated\_groupwise} & 1.974048 & 1.974048 & 0.036296 & 0.036296 & $\beta$ 1.2e-10, s.e. 2.0e-11\\
+\fn{two\_step\_sequential} & 1.998674 & 1.998674 & 0.032391 & 0.032391 & $\beta$ 3.0e-15, s.e. 5.6e-17\\
+\fn{iterated\_sequential} & 1.998436 & 1.998436 & 0.032267 & 0.032267 & $\beta$ 5.9e-13, s.e. 3.3e-12\\
+\end{valuetable}
 
 \nmsub{Large samples}
 With a million observations from \fn{StableRNG(123)}, 33 tests check that the two-step FWLS of each link, the MLEs, the
 four AR(1) estimators, the groupwise estimators and the sequential and joint estimators recover $\boldsymbol\beta$,
-$\boldsymbol\gamma$, $\rho$ and the group variances within 0.01 (\fn{test/runtests\_consistency.jl}, 91 seconds).
+$\boldsymbol\gamma$, $\rho$ and the group variances within 0.01 (\fn{test/runtests\_consistency.jl}, 88 seconds).
 
 \nmsub{The rest}
-\fn{test/runtests.jl}, 1,295 tests in 30 sets, on 200 observations with known parameters: each estimator by formula and
+\fn{test/runtests.jl}, 1,335 tests in 32 sets, on 200 observations with known parameters: each estimator by formula and
 by matrix, two-step against iterated, the coefficient names, \fn{predict} on new data, the Wald and likelihood-ratio
-tests, and t or normal inference.
+tests, t or normal inference, standard errors that scale with $y$, and the error when a fitted value reaches zero.
 
-\nmsection{Still open}
-\begin{itemize}
-  \item \textbf{No second implementation for some.} Hildreth--Lu, the FWLS estimators and the sequential and joint
-    estimators are checked by recovering known parameters, not against another program: R has no Hildreth--Lu grid
-    search (HoRM evaluates one $\rho$), and we found no implementation of AR(1) errors with a model of the variance.
-    SAS's PROC AUTOREG, with \fn{HETERO} and \fn{NLAG=1}, would be the comparison.
-  \item \textbf{One variance link with AR(1).} The sequential and joint estimators have the exponential link only.
-  \item \textbf{Panels.} HARE is for one cross section or one series; R's prais and Stata's \fn{xtgls} correct panels.
-  \item \textbf{A published table.} Like the other packages in Pollis, HARE should be run on a published dataset whose
-    printed results it can be compared with, such as the examples of \nmcite{greene2018}{Greene (2018)}, chapters 9
-    and 20.
-\end{itemize}
-
+\clearpage
 \nmsection{References}
 {\footnotesize\sloppy
 \nmref{bm1978}{Beach, C.\,M. and MacKinnon, J.\,G. (1978). A maximum likelihood procedure for regression with autocorrelated errors. \emph{Econometrica} 46(1), 51--58. \nmdoi{10.2307/1913644}}
@@ -238,7 +275,7 @@ tests, and t or normal inference.
 \nmref{ok1974}{Oberhofer, W. and Kmenta, J. (1974). A general procedure for obtaining maximum likelihood estimates in generalized regression models. \emph{Econometrica} 42(3), 579--590. \nmdoi{10.2307/1911793}}
 \nmref{pw1954}{Prais, S.\,J. and Winsten, C.\,B. (1954). Trend estimators and serial correlation. Cowles Commission Discussion Paper 383, Chicago.}
 \nmref{white1980}{White, H. (1980). A heteroskedasticity-consistent covariance matrix estimator and a direct test for heteroskedasticity. \emph{Econometrica} 48(4), 817--838. \nmdoi{10.2307/1912934}}
-\nmref{software}{Software: Mohr, F.\,X., prais (R); Spada, S., orcutt (R); Farrar, T.\,J., skedastic (R); Pinheiro, J., Bates, D. and R Core Team, nlme (R); GLM.jl, HypothesisTests.jl, Optim.jl and ForwardDiff.jl (MIT).}
+\nmref{software}{Software: Mohr, F.\,X., prais (R); Spada, S., orcutt (R); Farrar, T.\,J., skedastic (R); Pinheiro, J., Bates, D. and R Core Team, nlme (R); Messner, J.\,W., Mayr, G.\,J. and Zeileis, A., crch (R); R Core Team, stats (R); GLM.jl, HypothesisTests.jl, Optim.jl and ForwardDiff.jl (MIT).}
 }
 
 \nmcredit

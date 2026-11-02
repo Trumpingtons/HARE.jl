@@ -51,7 +51,7 @@ function two_step_sequential(X, y; intercept::Bool = true, Z=nothing,
     ystar, Xstar         = pw_transform(X, y, rho)
     u_pw                 = residuals(lm(Xstar, ystar))
     w, gamma, gamma_vcov = exponential_weights(Z_full, u_pw)
-    model                = lm(Xstar, ystar, weights = w)
+    model                = _wls(Xstar, ystar, w)
     beta                 = coef(model)
     f                    = X * beta
     return SequentialResult(beta, coefnames, mf, vcov(model), y .- f, f, rho, gamma, gamma_vcov, 1, true)
@@ -110,7 +110,7 @@ function iterated_sequential(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, 
         ystar, Xstar         = pw_transform(X, y, rho)
         u_pw                 = residuals(lm(Xstar, ystar))
         w, gamma, gamma_vcov = exponential_weights(Z_full, u_pw)
-        model                = lm(Xstar, ystar, weights = w)
+        model                = _wls(Xstar, ystar, w)
         rho                  = estimate_rho(y .- X * coef(model))
         if max(maximum(abs.(coef(model) .- beta_old)), abs(rho - rho_old)) < tol
             beta = coef(model)

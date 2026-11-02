@@ -15,7 +15,8 @@ Each model has a two-step variant and an iterated variant.
 
 function _fwls_two_step(X, y, Z, weight_fn, link, coefnames, mf)
     w, gamma, gamma_vcov = weight_fn(Z, residuals(lm(X, y)))
-    model = lm(X, y, weights = w)
+    _check_fitted_variance(link, Z, gamma, "the weights cannot be computed")
+    model = _wls(X, y, w)
     beta  = coef(model)
     f     = X * beta
     return FWLSResult(beta, coefnames, mf, vcov(model), y .- f, f, gamma, gamma_vcov, 1, true, link)
@@ -28,7 +29,8 @@ function _fwls_iterated(X, y, Z, weight_fn, link, coefnames, mf; tol, maxiter)
     for i in 1:maxiter
         beta_old             = coef(model)
         w, gamma, gamma_vcov = weight_fn(Z, residuals(model))
-        model                = lm(X, y, weights = w)
+        _check_fitted_variance(link, Z, gamma, "the weights cannot be computed")
+        model                = _wls(X, y, w)
         if maximum(abs.(coef(model) .- beta_old)) < tol
             beta = coef(model)
             f    = X * beta
@@ -157,7 +159,7 @@ standard deviation (Glejser 1969):
                a constant column (default: `X`). A constant is prepended internally.
 
 # Returns
-[`FWLSResult`](@ref).
+[`FWLSResult`](@ref). Throws an `ArgumentError` if a fitted standard deviation is zero or negative.
 
 # References
 Glejser, H. (1969). A new test for heteroskedasticity. *Journal of the
@@ -196,7 +198,7 @@ Repeats the weight-update step until `max|β̂(i) - β̂(i-1)| < tol`.
 - `maxiter`  : maximum iterations (default `100`).
 
 # Returns
-[`FWLSResult`](@ref).
+[`FWLSResult`](@ref). Throws an `ArgumentError` if a fitted standard deviation is zero or negative at any iteration.
 
 # References
 Glejser, H. (1969). A new test for heteroskedasticity. *Journal of the
@@ -245,7 +247,7 @@ variance function:
                a constant column (default: `X`). A constant is prepended internally.
 
 # Returns
-[`FWLSResult`](@ref).
+[`FWLSResult`](@ref). Throws an `ArgumentError` if a fitted variance is zero or negative.
 """
 function linear_fwls(X, y; intercept::Bool = true, Z=nothing,
                      coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],
@@ -280,7 +282,7 @@ the weight-update step until `max|β̂(i) - β̂(i-1)| < tol`.
 - `maxiter`  : maximum iterations (default `100`).
 
 # Returns
-[`FWLSResult`](@ref).
+[`FWLSResult`](@ref). Throws an `ArgumentError` if a fitted variance is zero or negative at any iteration.
 """
 function linear_ifwls(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, maxiter=100,
                       coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],
@@ -445,7 +447,7 @@ function two_step_groupwise(X, y, groups; intercept::Bool = true,
     u      = residuals(lm(X_full, y))
     sigma2 = _gw_sigma2(u, groups, glabels)
     w      = _gw_weights(groups, glabels, sigma2)
-    model  = lm(X_full, y, weights = w)
+    model  = _wls(X_full, y, w)
     beta   = coef(model)
     f      = X_full * beta
     ll     = _gw_loglik(y .- f, groups, glabels, sigma2)
@@ -505,7 +507,7 @@ function iterated_groupwise(X, y, groups; intercept::Bool = true, tol = 1e-8, ma
     for i in 1:maxiter
         beta_old = copy(beta)
         w        = _gw_weights(groups, glabels, sigma2)
-        model    = lm(X_full, y, weights = w)
+        model    = _wls(X_full, y, w)
         beta     = coef(model)
         sigma2   = _gw_sigma2(y .- X_full * beta, groups, glabels)
 

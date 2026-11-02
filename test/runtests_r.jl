@@ -90,6 +90,26 @@
 # (sigma_ref * ratios)^2
 #   # [0.275412406294380, 0.948016808963599, 2.000291616918291, 4.064414410886320]
 #
+# ## the weighted fit of the FWLS, groupwise and sequential estimators vs stats::lm.
+# ## Each CSV holds this file's data with the final weights HARE computes (the sequential
+# ## ones also its Prais-Winsten transformed data, with c the transformed constant).
+# ## R has no function for these procedures as a whole, so this checks the weighted fit
+# ## and its standard errors, not the auxiliary regression. Data and Z:
+# ##   exp, power: y_exp, Z = x1;  quad, linear: y_exp, Z = 1 + |x1|;
+# ##   gw: y_gw, gw_groups;  seq: y_ar, Z = x1
+# for (name in sub("\\.csv$", "", list.files("ref"))) {
+#   d <- read.csv(file.path("ref", paste0(name, ".csv")))
+#   l <- lm(y ~ 0 + c + x1 + x2, d, weights = w)
+#   coef(l); coef(summary(l))[, "Std. Error"]
+# }
+#
+# ## quadratic_mle vs crch, whose scale link "identity" is sigma_i = z_i' gamma
+# library(crch)                                         # crch version: 1.2.3
+# d <- exp; d$z <- 1 + abs(d$x1)
+# ctl <- crch.control(method = "BFGS", reltol = 1e-14, maxit = 20000, hessian = TRUE)
+# m <- crch(y ~ x1 + x2 | z, data = d, dist = "gaussian", link.scale = "identity", control = ctl)
+# coef(m, "location"); coef(m, "scale"); logLik(m); sqrt(diag(vcov(m)))[1:3]
+#
 # ## Beach-MacKinnon via nlme::gls (exact AR(1) ML, functional equivalent)
 # library(nlme)                                         # nlme version: 3.1.168
 # ar$t <- 1:nrow(ar)
@@ -184,6 +204,37 @@ using StatsBase
     r_pow_loglik = -565.804191733345
     r_pow_gamma  = [-0.039018137343397, 0.954740616024428]  # (log σ², 2δ)
 
+    r_quad_coef   = [0.991971374648034, 2.004755987545277, -1.042791866344038]
+    r_quad_se     = [0.053015676526596, 0.069204195902907, 0.052111566314883]
+    r_quad_gamma  = [0.356584268207181, 0.504708225142563]
+    r_quad_loglik = -818.089070482050
+
+    r_wls_exp_coef    = [0.976106975097229,  1.993231654491679, -1.011174396770982]
+    r_wls_exp_se      = [0.049402758160676,  0.030997652998633,  0.029663836650158]
+    r_wls_quad_coef   = [0.987541058487342,  1.989684689163091, -1.047266160579801]
+    r_wls_quad_se     = [0.054783024344699,  0.065363168798677,  0.053716822382790]
+    r_wls_power_coef  = [0.967361496153008,  1.947179286680859, -1.050020990963536]
+    r_wls_power_se    = [0.059536263913069,  0.058686020001802,  0.058267991640074]
+    r_wls_linear_coef = [1.002178237951858,  2.017983524709118, -1.011177449090497]
+    r_wls_linear_se   = [0.050450075005393,  0.077287511709863,  0.050372164644056]
+    r_wls_gw_coef     = [0.999920139091014,  1.972670109567683, -0.941853180421893]
+    r_wls_gw_se       = [0.037636720001271,  0.036595199294465,  0.037966777627347]
+    r_wls_seq_coef    = [0.812164985887732,  1.998673711391199, -0.995876497910776]
+    r_wls_seq_se      = [0.163493079999346,  0.032391489285453,  0.033893332528454]
+
+    r_iwls_exp_coef    = [0.976271296512409,  1.993377589329488, -1.011450911697182]
+    r_iwls_exp_se      = [0.049415874985112,  0.031110262062374,  0.029789948547687]
+    r_iwls_quad_coef   = [0.987526411223636,  1.989641800803554, -1.047275874201910]
+    r_iwls_quad_se     = [0.054787822133780,  0.065353608122910,  0.053721302359514]
+    r_iwls_power_coef  = [0.967283629145510,  1.947096893391502, -1.050067605897661]
+    r_iwls_power_se    = [0.059552075097253,  0.058669571653217,  0.058282003175835]
+    r_iwls_linear_coef = [1.005347515445389,  2.021275403207342, -1.004601077401668]
+    r_iwls_linear_se   = [0.049934603347124,  0.078789967295681,  0.050036192224593]
+    r_iwls_gw_coef     = [0.999997976142110,  1.974048022154757, -0.941274896284603]
+    r_iwls_gw_se       = [0.037346579782025,  0.036296241142614,  0.037690819207748]
+    r_iwls_seq_coef    = [0.813285541236929,  1.998435541727583, -0.995721465710528]
+    r_iwls_seq_se      = [0.167198820837672,  0.032266751873431,  0.033761865856394]
+
     r_gw_coef   = [0.999997707147934,  1.974047597189269, -0.941274618422628]
     r_gw_loglik = -725.147180017231
     r_gw_sigma2 = [0.274319917149154,  0.757623193539298,  1.950196799526272, 3.170678872290372]
@@ -262,6 +313,47 @@ using StatsBase
         @test m.loglik   ≈ r_gw_loglik atol=1e-3
         @test m.sigma2   ≈ r_gw_sigma2 atol=1e-3
         @test m.converged
+    end
+
+    Z_x1  = hcat(x1)
+    Z_pos = hcat(1 .+ abs.(x1))
+
+    # ── quadratic_mle vs crch(link.scale="identity") ─────────────────────────
+    @testset "quadratic_mle vs R (crch 1.2.3)" begin
+        m = quadratic_mle(X, y_exp; Z = Z_pos)
+        @test coef(m)     ≈ r_quad_coef   atol=1e-6
+        @test stderror(m) ≈ r_quad_se     atol=1e-6
+        @test m.gamma     ≈ r_quad_gamma  atol=1e-6
+        @test m.loglik    ≈ r_quad_loglik atol=1e-6
+        @test m.converged
+    end
+
+    # ── weighted fit of FWLS, groupwise and sequential vs stats::lm(weights = w) ─
+    # R's standard errors use sum(w e²) / (n - k), which does not depend on the units of y.
+    # The iterated estimators stop within 1e-8 of the weights given to R, hence the wider tolerance.
+    @testset "two-step weighted fit vs R (stats::lm)" begin
+        for (m, r_coef, r_se) in ((exponential_fwls(X, y_exp; Z = Z_x1), r_wls_exp_coef, r_wls_exp_se),
+                                  (quadratic_fwls(X, y_exp; Z = Z_pos), r_wls_quad_coef, r_wls_quad_se),
+                                  (power_fwls(X, y_exp; Z = Z_x1), r_wls_power_coef, r_wls_power_se),
+                                  (linear_fwls(X, y_exp; Z = Z_pos), r_wls_linear_coef, r_wls_linear_se),
+                                  (two_step_groupwise(X, y_gw, gw_groups), r_wls_gw_coef, r_wls_gw_se),
+                                  (two_step_sequential(X, y_ar; Z = Z_x1), r_wls_seq_coef, r_wls_seq_se))
+            @test coef(m)     ≈ r_coef atol=1e-10
+            @test stderror(m) ≈ r_se   atol=1e-10
+        end
+    end
+
+    @testset "iterated weighted fit vs R (stats::lm)" begin
+        for (m, r_coef, r_se) in ((exponential_ifwls(X, y_exp; Z = Z_x1), r_iwls_exp_coef, r_iwls_exp_se),
+                                  (quadratic_ifwls(X, y_exp; Z = Z_pos), r_iwls_quad_coef, r_iwls_quad_se),
+                                  (power_ifwls(X, y_exp; Z = Z_x1), r_iwls_power_coef, r_iwls_power_se),
+                                  (linear_ifwls(X, y_exp; Z = Z_pos), r_iwls_linear_coef, r_iwls_linear_se),
+                                  (iterated_groupwise(X, y_gw, gw_groups), r_iwls_gw_coef, r_iwls_gw_se),
+                                  (iterated_sequential(X, y_ar; Z = Z_x1), r_iwls_seq_coef, r_iwls_seq_se))
+            @test m.converged
+            @test coef(m)     ≈ r_coef atol=1e-6
+            @test stderror(m) ≈ r_se   atol=1e-6
+        end
     end
 
     # ── Beach-MacKinnon vs nlme::gls(corAR1(), method="ML") ──────────────────

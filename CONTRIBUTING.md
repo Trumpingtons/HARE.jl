@@ -40,7 +40,7 @@ julia --project=.
 ```
 
 **R cross-validation** (`test/runtests_r.jl`) — validates HARE against R reference
-implementations (prais, orcutt, skedastic, nlme).  No R installation required;
+implementations (prais, orcutt, skedastic, nlme, crch, stats::lm).  No R installation required;
 reference values are hardcoded.  Run with:
 
 ```bash

@@ -47,8 +47,13 @@ function _hetero_warm_start(X_full, Z_full, y, link)
         gamma0 = coef(aux)
     elseif link === :quadratic
         _, gamma0, _ = quadratic_weights(Z_full, u)
-    else  # :linear — constant variance start (always feasible)
-        gamma0 = vcat(mean(u.^2), zeros(size(Z_full, 2) - 1))
+        # The search does not move from a start with negative fitted values: start from a constant instead
+        any(<=(0), Z_full * gamma0) && (gamma0 = vcat(sqrt(π / 2) * mean(abs.(u)), zeros(size(Z_full, 2) - 1)))
+    else  # :linear
+        _, gamma0, _ = linear_weights(Z_full, u)
+        # A constant start is always feasible, but it can overshoot into the likelihood's spike at zero
+        # variance when the two-step line has a proper maximum nearby. Fminbox needs gamma_0 above 1e-8.
+        (gamma0[1] <= 1e-8 || any(<=(0), Z_full * gamma0)) && (gamma0 = vcat(mean(u.^2), zeros(size(Z_full, 2) - 1)))
     end
     return vcat(beta0, gamma0)
 end
@@ -87,6 +92,7 @@ function _hetero_mle(X_full, Z_full, y, link, coefnames, mf; tol, maxiter)
         _hetero_mle_core(X_full, Z_full, y, link, theta0; tol=tol, maxiter=maxiter)
     beta       = theta_hat[1:k]
     gamma      = theta_hat[k+1:end]
+    _check_fitted_variance(link, Z_full, gamma, "the maximum likelihood fit is not valid")
     vcov_beta  = vcov_full[1:k, 1:k]
     vcov_gamma = vcov_full[k+1:end, k+1:end]
     f          = X_full * beta
@@ -182,7 +188,7 @@ Corresponds to SAS `PROC AUTOREG HETERO LINK=SQUARE`.
 - `maxiter` : maximum number of L-BFGS iterations (default `1000`).
 
 # Returns
-[`MLEResult`](@ref) with `link = :quadratic`.
+[`MLEResult`](@ref) with `link = :quadratic`. Throws an `ArgumentError` if a fitted standard deviation is zero or negative at the optimum.
 
 # References
 Glejser, H. (1969). A new test for heteroskedasticity. *Journal of the
@@ -236,7 +242,7 @@ Corresponds to SAS `PROC AUTOREG HETERO LINK=LINEAR`.
 - `maxiter` : maximum number of L-BFGS iterations (default `1000`).
 
 # Returns
-[`MLEResult`](@ref) with `link = :linear`.
+[`MLEResult`](@ref) with `link = :linear`. Throws an `ArgumentError` if a fitted variance is zero or negative at the optimum.
 """
 function linear_mle(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, maxiter=1000,
                     coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],

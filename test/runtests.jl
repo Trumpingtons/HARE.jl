@@ -555,10 +555,14 @@ end
 end
 
 @testset "linear_mle" begin
-    m = linear_mle(X, y_het)
+    # @testset reseeds the global generator, so randn(n) here would return x1
+    y_lin    = hcat(ones(n), X) * b_true .+ sqrt.(0.5 .+ 0.5 .* abs.(x1)) .* randn(MersenneTwister(5), n)
+    data_lin = (y = y_lin, x1 = x1, x2 = x2)
+    Z_lin    = hcat(abs.(x1), abs.(x2))
+    m = linear_mle(X, y_lin; Z = Z_lin)
     @test m isa MLEResult
     @test m.link === :linear
-    check_interface(m, y_het, n, k)
+    check_interface(m, y_lin, n, k)
     @test m.converged
     @test isfinite(m.loglik)
     @test loglikelihood(m) == m.loglik
@@ -566,16 +570,47 @@ end
     @test size(m.gamma_vcov)   == (k, k)
     @test all(diag(m.gamma_vcov) .> 0)
 
-    m2 = linear_mle(@formula(y ~ x1 + x2), data_het)
+    m2 = linear_mle(@formula(y ~ x1 + x2), data_lin; Z = Z_lin)
     @test coef(m)  ≈ coef(m2)  atol=1e-6
     @test m.gamma  ≈ m2.gamma  atol=1e-6
 
     Z_alt = hcat(abs.(x1),)
-    mZ = linear_mle(X, y_het; Z = Z_alt)
+    mZ = linear_mle(X, y_lin; Z = Z_alt)
     @test mZ isa MLEResult
     @test length(mZ.gamma)    == 2
     @test length(coef(mZ))    == k
     @test mZ.converged
+end
+
+@testset "weighted standard errors scale with the units of y" begin
+    Z_pos  = hcat(1 .+ abs.(x1))
+    groups = repeat(["A", "B", "C", "D"], inner = n ÷ 4)
+    fits = [(X, y) -> exponential_fwls(X, y; Z = Z_pos), (X, y) -> exponential_ifwls(X, y; Z = Z_pos),
+            (X, y) -> quadratic_fwls(X, y; Z = Z_pos), (X, y) -> quadratic_ifwls(X, y; Z = Z_pos),
+            (X, y) -> power_fwls(X, y; Z = Z_pos), (X, y) -> power_ifwls(X, y; Z = Z_pos),
+            (X, y) -> linear_fwls(X, y; Z = Z_pos), (X, y) -> linear_ifwls(X, y; Z = Z_pos),
+            (X, y) -> two_step_groupwise(X, y, groups), (X, y) -> iterated_groupwise(X, y, groups),
+            (X, y) -> two_step_sequential(X, y; Z = Z_pos), (X, y) -> iterated_sequential(X, y; Z = Z_pos)]
+    for f in fits, c in (0.01, 100.0)
+        @test stderror(f(X, c .* y_het)) ≈ c .* stderror(f(X, y_het)) rtol=1e-5
+    end
+end
+
+@testset "linear and quadratic estimators stop when a fitted value reaches zero" begin
+    y_clip = hcat(ones(n), X) * b_true .+ ifelse.(x1 .> 0, 5 .* x1, 0.1) .* randn(MersenneTwister(6), n)
+    for f in (linear_fwls, quadratic_fwls, linear_ifwls, quadratic_ifwls, linear_mle, quadratic_mle)
+        @test_throws ArgumentError f(X, y_clip; Z = hcat(x1))
+    end
+    for f in (linear_fwls, quadratic_fwls, linear_ifwls, quadratic_ifwls, linear_mle, quadratic_mle)
+        @test f(X, y_het; Z = hcat(1 .+ abs.(x1))) isa HAREModel
+    end
+
+    # Fitted values 1e-7, 1 + 1e-7, 2 + 1e-7: the first is below 1e-6 of their mean of about 1
+    Z_line = hcat(ones(3), [0.0, 1.0, 2.0])
+    @test_throws ArgumentError("Linear variance equation: 1 of 3 fitted variances are zero or negative, so the weights cannot be computed. A straight line does not describe the variance on these data. Use the Exponential or Power form, or OLS with robust standard errors.") HARE._check_fitted_variance(:linear, Z_line, [1e-7, 1.0], "the weights cannot be computed")
+    @test_throws ArgumentError("Quadratic standard deviation equation: 2 of 3 fitted standard deviations are zero or negative, so the maximum likelihood fit is not valid. A straight line does not describe the standard deviation on these data. Use the Exponential or Power form, or OLS with robust standard errors.") HARE._check_fitted_variance(:quadratic, Z_line, [-1.0, 1.0], "the maximum likelihood fit is not valid")
+    @test isnothing(HARE._check_fitted_variance(:linear, Z_line, [1e-5, 1.0], "the weights cannot be computed"))
+    @test isnothing(HARE._check_fitted_variance(:exponential, Z_line, [-1.0, 1.0], "the weights cannot be computed"))
 end
 
 @testset "two_step_groupwise" begin
@@ -802,7 +837,7 @@ end
                  beach_mackinnon(X, y_ar),
                  exponential_mle(X, y_het),
                  quadratic_mle(X, y_glej),
-                 linear_mle(X, y_het)]
+                 linear_mle(X, y_het; Z = hcat(1 .+ abs.(x1)))]
         @test wald_test(mfit, R) isa WaldTestResult
     end
 end

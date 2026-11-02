@@ -91,8 +91,8 @@ The standard deviation is modelled as a linear function of auxiliary regressors:
 
     |u_hat_i| ~ Z_i * gamma
 
-Weights are `w_i = 1 / sigma_hat_i^2` where `sigma_hat_i = max(Z_i * gamma_hat, 1e-8)`.
-Negative or near-zero fitted values are clipped to `1e-8` to guarantee positive weights.
+Weights are `w_i = 1 / sigma_hat_i^2` where `sigma_hat_i = Z_i * gamma_hat`.
+`_check_fitted_variance` stops FWLS if a fitted value is zero or negative.
 
 # Arguments
 - `Z`: n x p auxiliary regressor matrix (including a constant column).
@@ -108,7 +108,7 @@ function quadratic_weights(Z, u)
     aux       = lm(Z, abs.(u))
     c         = sqrt(π / 2)
     gamma     = coef(aux) .* c
-    sigma_hat = max.(fitted(aux) .* c, 1e-8)
+    sigma_hat = fitted(aux) .* c
     return 1.0 ./ sigma_hat.^2, gamma, vcov(aux) .* (π / 2)
 end
 
@@ -122,9 +122,26 @@ end
 function linear_weights(Z, u)
     aux    = lm(Z, u.^2)
     gamma  = coef(aux)
-    sigma2 = max.(fitted(aux), 1e-10)
-    return 1.0 ./ sigma2, gamma, vcov(aux)
+    return 1.0 ./ fitted(aux), gamma, vcov(aux)
 end
+
+# A straight line through the variance or standard deviation can reach zero or fall below it. No weight
+# exists for such a row, and a floor would give it a huge weight that dominates the fit. A fitted value
+# below 1e-6 of the mean fitted value counts as zero.
+function _check_fitted_variance(link, Z, gamma, consequence)
+    link === :linear || link === :quadratic || return nothing
+    fitted_values = Z * gamma
+    failed        = count(<=(1e-6 * max(mean(fitted_values), 0.0)), fitted_values)
+    failed == 0 && return nothing
+    (equation, quantity) = link === :linear ? ("Linear variance", "variance") : ("Quadratic standard deviation", "standard deviation")
+    throw(ArgumentError("$equation equation: $failed of $(size(Z, 1)) fitted $(quantity)s are zero or negative, so $consequence. A straight line does not describe the $quantity on these data. Use the Exponential or Power form, or OLS with robust standard errors."))
+end
+
+# Weighted least squares with inverse-variance weights. GLM takes weights as frequency
+# weights, with sum(w) - k residual degrees of freedom, and sum(w) changes with the units
+# of y. Rescaled to sum to n, the weights leave the coefficients unchanged and give a
+# dispersion of sum(w e^2) / (n - k), so the standard errors scale with y.
+_wls(X, y, w) = lm(X, y, weights = w .* (length(w) / sum(w)))
 
 """
     pw_transform(X, y, rho) -> (ystar, Xstar)
