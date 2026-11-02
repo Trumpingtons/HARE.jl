@@ -51,7 +51,7 @@
    by weights you give it, and robust standard errors leave the estimates as they are.}
   {\fn{HARE.jl} (Heteroskedasticity and Autocorrelation Estimators), from GitHub:
    \fn{Pkg.add(url = "https://github.com/Trumpingtons/HARE.jl")}.}
-  {1,335 tests of every estimator and test; 65 against R (prais, orcutt, skedastic, nlme, crch, lm) on the same data;
+  {1,355 tests of every estimator and test; 70 against R (prais, orcutt, skedastic, nlme, crch, lm) on the same data;
    33 that recover the parameters from a million observations.}
 
 \nmsection{Why a package}
@@ -106,7 +106,8 @@ $\hat\sigma^2(\mathbf{X}^\top\mathbf{W}\mathbf{X})^{-1}$ with $\hat\sigma^2 = \s
 \fn{lm}, so they scale with the units of $y$. In the quadratic and linear links a fitted value can fall to zero or
 below, and no weight exists for such a row. FWLS and MLE then stop with an error that gives the number of rows and
 points to the exponential or power link, or OLS with robust standard errors. A value below $10^{-6}$ of the mean fitted
-value counts as zero.
+value counts as zero. The MLE search rejects any step to such a value, and it fits $y$ in units of its spread, so its
+results do not depend on the units of $y$.
 
 \nmsub{Autocorrelation: AR(1) errors, $u_t = \rho u_{t-1} + e_t$}
 \begin{itemize}
@@ -205,7 +206,8 @@ Julia 1.13.1 today.
 \fn{exponential\_mle} & nlme, \fn{varExp} & $\hat\gamma_1 = 1.080067$, $\ell = -694.6695$ & $\beta$ 4.3e-11, $\gamma$ 1.1e-9\\
 \fn{power\_mle} & nlme, \fn{varPower} & $\hat\gamma_1 = 0.954741$, $\ell = -565.8042$ & $\beta$ 1.5e-9, $\gamma$ 4.2e-8\\
 \fn{groupwise\_mle} & nlme, \fn{varIdent} & $\hat\sigma^2 = 0.274, 0.758, 1.950, 3.171$ & $\beta$ 4.2e-7, $\sigma^2$ 5.8e-5\\
-\fn{quadratic\_mle} & crch 1.2.3, identity link & $\hat\gamma_1 = 0.504708$, $\ell = -818.0891$ & $\beta$ 1.2e-8, $\gamma$ 4.6e-9\\
+\fn{quadratic\_mle} & crch 1.2.3, identity link & $\hat\gamma_1 = 0.504708$, $\ell = -818.0891$ & $\beta$ 1.0e-8, $\gamma$ 7.6e-10\\
+\fn{linear\_mle} & crch 1.2.3, quadratic link & $\hat\gamma_1 = 1.247825$, $\ell = -820.3623$ & $\beta$ 7.2e-9, $\gamma$ 1.2e-8\\
 \end{valuetable}
 nlme maximizes the AR(1) likelihood by Newton--Raphson and HARE by Brent's method on the concentrated likelihood; they
 agree to $2\times10^{-8}$ in $\rho$. nlme writes the exponential and power variances as $\sigma^2 e^{2\delta x}$ and
@@ -222,7 +224,8 @@ from start to finish.
 \fn{exponential\_mle} & \fn{gls}, \fn{varExp} & 1.993399 & 1.993399 & 0.031057 & 0.031127 & $\beta$ 5.8e-11, s.e. 1.3e-4\\
 \fn{power\_mle} & \fn{gls}, \fn{varPower} & 2.115026 & 2.115026 & 0.048315 & 0.048390 & $\beta$ 1.5e-9, s.e. 7.5e-5\\
 \fn{groupwise\_mle} & \fn{gls}, \fn{varIdent} & 1.974048 & 1.974048 & 0.036187 & 0.036296 & $\beta$ 4.2e-7, s.e. 1.1e-4\\
-\fn{quadratic\_mle} & crch, identity link & 2.004756 & 2.004756 & 0.069204 & 0.069204 & $\beta$ 1.2e-8, s.e. 2.1e-9\\
+\fn{quadratic\_mle} & crch, identity link & 2.004756 & 2.004756 & 0.069204 & 0.069204 & $\beta$ 1.0e-8, s.e. 2.1e-9\\
+\fn{linear\_mle} & crch, quadratic link & 1.994977 & 1.994977 & 0.068296 & 0.068296 & $\beta$ 7.2e-9, s.e. 1.0e-9\\
 \fn{beach\_mackinnon} & \fn{gls}, \fn{corAR1} & 2.000847 & 2.000847 & 0.032530 & 0.032530 & $\beta$ 1.7e-9, s.e. 1.4e-8\\
 \fn{iterated\_prais\_winsten} & prais & 2.000888 & 2.000888 & 0.032507 & 0.032507 & $\beta$ 6.0e-10, s.e. 5.2e-9\\
 \fn{two\_step\_prais\_winsten} & prais & 2.000733 & 2.000733 & 0.032595 & 0.032595 & $\beta$ 5.0e-15, s.e. 1.0e-15\\
@@ -255,10 +258,10 @@ data $Z = x_1$ gives fitted values below zero and both stop with the error above
 \nmsub{Large samples}
 With a million observations from \fn{StableRNG(123)}, 33 tests check that the two-step FWLS of each link, the MLEs, the
 four AR(1) estimators, the groupwise estimators and the sequential and joint estimators recover $\boldsymbol\beta$,
-$\boldsymbol\gamma$, $\rho$ and the group variances within 0.01 (\fn{test/runtests\_consistency.jl}, 88 seconds).
+$\boldsymbol\gamma$, $\rho$ and the group variances within 0.01 (\fn{test/runtests\_consistency.jl}, about 4 minutes).
 
 \nmsub{The rest}
-\fn{test/runtests.jl}, 1,335 tests in 32 sets, on 200 observations with known parameters: each estimator by formula and
+\fn{test/runtests.jl}, 1,355 tests in 33 sets, on 200 observations with known parameters: each estimator by formula and
 by matrix, two-step against iterated, the coefficient names, \fn{predict} on new data, the Wald and likelihood-ratio
 tests, t or normal inference, standard errors that scale with $y$, and the error when a fitted value reaches zero.
 

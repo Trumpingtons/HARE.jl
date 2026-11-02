@@ -139,8 +139,10 @@ correction multiplies the raw OLS coefficients by $\sqrt{\pi/2}$:
 $$\hat{\boldsymbol{\gamma}} = \sqrt{\pi/2}\;(\mathbf{Z}^\top\mathbf{Z})^{-1}\mathbf{Z}^\top|\hat{\mathbf{u}}|$$
 
 The vcov is scaled accordingly by $\pi/2$.  For the WLS weights,
-$\hat{\sigma}_i = \max(\mathbf{z}_i^\top\hat{\boldsymbol{\gamma}},\, 10^{-8})$
-(clipped to avoid division by zero), and $w_i = 1/\hat{\sigma}_i^2$.
+$\hat{\sigma}_i = \mathbf{z}_i^\top\hat{\boldsymbol{\gamma}}$ and $w_i = 1/\hat{\sigma}_i^2$.
+The estimator stops with an error if any $\hat{\sigma}_i$ is zero or negative (below
+$10^{-6}$ of the mean fitted value), and the linear link does the same for $\hat{\sigma}_i^2$:
+no weight exists for such a row, and a floor would give it a weight that dominates the fit.
 
 Without this correction the reported $\boldsymbol{\gamma}$ would be biased toward
 zero by the factor $\sqrt{2/\pi} \approx 0.798$ for all $n$, making the estimator
@@ -212,34 +214,23 @@ Harvey FWLS warm start also carries slope information (the auxiliary log-linear
 regression directly estimates each element of $\boldsymbol{\gamma}$), so L-BFGS starts
 in a well-identified region and never explores infeasible directions.
 
-**Quadratic link.**  $\hat{\sigma}_i = \max(\mathbf{z}_i^\top\hat{\boldsymbol{\gamma}},\, 10^{-10})$.
-A hard clamp suffices here because the Glejser FWLS warm start estimates $\boldsymbol{\gamma}$
-from $|\hat{u}|$, which is non-negative, so the warm start already carries slope
-information with $\hat{\sigma}_i > 0$ everywhere.  L-BFGS starts in the feasible
-region and rarely crosses zero during the line search; the clamp is almost never
-triggered, so its non-smoothness has no practical effect.  Using softplus instead
-would be unnecessary: it requires two transcendental evaluations per observation
-versus a single comparison, and ForwardDiff propagates derivatives through both,
-adding cost with no benefit.
+**Quadratic and linear links.**  Nothing keeps $\mathbf{z}_i^\top\boldsymbol{\gamma}$ positive,
+so the negative log-likelihood returns `Inf` for any $\boldsymbol{\gamma}$ with a fitted value at
+or below zero.  The line search steps back from that value, so the search stays inside the model.
+All of $\boldsymbol{\gamma}$ is free: $\gamma_0$ may be negative as long as every fitted value is
+positive, as it is at the maximum on some data.  `crch` finds the same value there.
 
-**Linear link.**  Uses a **hard clamp** $\tilde{\sigma}_i^2 = \max(\mathbf{z}_i^\top\hat{\boldsymbol{\gamma}},\,10^{-10})$
-combined with a **box constraint** on the variance intercept: $\gamma_0 \geq 10^{-8}$.
-The box constraint is enforced by replacing the unconstrained L-BFGS call with
-`Fminbox(LBFGS())` (Optim.jl), which wraps the optimizer in a projected-gradient
-framework and keeps $\gamma_0$ non-negative throughout the line search.  The
-remaining parameters are unconstrained.
+**Why not a floor.**  A floor such as $\max(\sigma_i^2, 10^{-10})$ lets the search leave the model.
+A row that falls below the floor while the regression line passes through it adds up to
+$-\tfrac{1}{2}\log 10^{-10} \approx 11.5$ to the log-likelihood, so the search is drawn there and reports
+convergence at a spike.  A floor also depends on the units of $y$.  The likelihood itself is
+still unbounded as a variance approaches zero with a zero residual, so the estimators check the fit
+at the optimum and stop with an error if a fitted value has reached zero.
 
 **Why not softplus.**  Softplus ($\tilde{\sigma}^2 = \log(1+e^x)$) is smooth and
 strictly positive everywhere, which makes it attractive in principle.  However, it
 changes the model: the estimated $\boldsymbol{\gamma}$ no longer corresponds to the
-linear variance function $\sigma_i^2 = \mathbf{z}_i^\top\boldsymbol{\gamma}$, and
-the transformation is not invertible in a simple closed form.  More practically,
-softplus adds two transcendental evaluations per observation (exp + log), increases
-AD tape complexity, and was found to destabilise convergence in numerical experiments
-on the test data.  The hard clamp + Fminbox combination is simpler, interpretable,
-and sufficient: the box constraint prevents L-BFGS from pushing $\gamma_0$ negative
-during early line searches, and the hard clamp is a last-resort safeguard that is
-rarely triggered once the optimizer is in the feasible region.
+linear variance function $\sigma_i^2 = \mathbf{z}_i^\top\boldsymbol{\gamma}$.
 
 ### Optimisation
 
@@ -255,31 +246,13 @@ enter the gradient in a coupled way that does not yield a cheap closed-form
 profile.  Joint L-BFGS with AD is straightforward and fast for the parameter
 dimensions typical of these models.
 
-**Choice of Fminbox (box-constrained L-BFGS) for the linear link.**  The
-linear link requires $\sigma_i^2 = \gamma_0 + \mathbf{z}_i^\top\boldsymbol{\gamma} > 0$
-for all $i$.  This is a constraint on the parameter space, not a model
-transformation.  The variance intercept $\gamma_0$ must be positive; otherwise
-the constant-variance warm start ($\boldsymbol{\gamma} = \mathbf{0}$, $\gamma_0 = \bar{u}^2$)
-immediately gives L-BFGS freedom to push $\gamma_0$ negative in the first
-line search step, making $\sigma_i^2 \leq 0$ at some observations.  The hard
-clamp catches this, but the resulting kink destabilises the BFGS Hessian
-approximation: the curvature estimated from gradient differences across the
-kink is spurious, and the method can stall or diverge.
+**Choice of backtracking for the quadratic and linear links.**  HagerZhang, the default line
+search, fails an internal assertion on the infinite value outside the model; backtracking steps
+back from it.  The cost is more iterations, for example 16 against 4 on one tutorial fit.
 
-`Fminbox(LBFGS())` enforces $\gamma_0 \geq 10^{-8}$ via a projected-gradient
-strategy: at each iteration the step is projected back onto the feasible box
-before the Wolfe-condition line search, so the BFGS curvature estimates are
-always computed within the feasible (smooth) region.  All other parameters
-remain unconstrained ($\boldsymbol{\beta}$ and the slope parameters
-$\boldsymbol{\gamma}_{2:\mathrm{end}}$ are unbounded).
-
-**Why not softplus instead.**  Softplus $\tilde{\sigma}_i^2 = \log(1 + e^{\mathbf{z}_i^\top\boldsymbol{\gamma}})$
-makes the parameter space unconstrained by changing the model: the estimated
-$\boldsymbol{\gamma}$ no longer corresponds to the linear variance function
-$\sigma_i^2 = \mathbf{z}_i^\top\boldsymbol{\gamma}$.  The numerical behaviour
-was also found to be worse in practice.  Box constraints preserve the model
-semantics and require only a thin wrapper around the same L-BFGS core used
-for the other links.
+**Units of $y$.**  The two links fit $y / \mathrm{sd}(y)$ and convert the results back, because their
+$\boldsymbol{\gamma}$ has the units of $y$ or $y^2$, far from those of $\boldsymbol{\beta}$ when $y$ is
+very small or very large.
 
 ### Warm starts
 
@@ -290,11 +263,12 @@ Good starting values are essential for the quadratic and linear links.
 | Exponential | Two-step FWLS: $\boldsymbol{\beta}_0$ from OLS, $\boldsymbol{\gamma}_0$ from auxiliary log-linear regression of $\log\hat{u}^2 - c$ on $Z$ |
 | Quadratic | Two-step FWLS: $\boldsymbol{\beta}_0$ from OLS, $\boldsymbol{\gamma}_0$ from auxiliary regression of $|\hat{u}|$ on $Z$ (with $\sqrt{\pi/2}$ correction) |
 | Power | Two-step FWLS on $\log|Z|$: $\boldsymbol{\beta}_0$ from OLS, $\boldsymbol{\gamma}_0$ from auxiliary log-linear regression of $\log\hat{u}^2 - c$ on $[\mathbf{1}, \log|Z|]$ |
-| Linear | Constant variance: $\boldsymbol{\beta}_0$ from OLS, $\gamma_0 = \bar{u}^2$, $\boldsymbol{\gamma} = \mathbf{0}$ |
+| Linear | Two-step FWLS: $\boldsymbol{\beta}_0$ from OLS, $\boldsymbol{\gamma}_0$ from auxiliary regression of $\hat{u}^2$ on $Z$ |
 
-The constant-variance start for the linear link is always feasible (all
-$\sigma_i^2 > 0$), avoiding the risk of OLS-of-$\hat{u}^2$ yielding negative
-predicted variances at some observations.
+If the two-step line of the quadratic or linear link has a fitted value at or below zero, the
+search starts from a constant instead: $\gamma_0 = \sqrt{\pi/2}\,\overline{|\hat{u}|}$ or $\gamma_0 = \overline{\hat{u}^2}$,
+with the other elements zero.  The constant is not the first choice, because it can overshoot into
+the spike on data with a proper maximum nearby.
 
 ### Standard errors
 
@@ -313,12 +287,9 @@ errors in Sections 2–3 which are conditional on the estimated weights.
 
 ### Hessian robustness for the linear link
 
-**Problem.**  The hard clamp $\max(\sigma_i^2, 10^{-10})$ in the linear link
-likelihood creates a kink: the function is piecewise smooth but not globally
-smooth at observations where the clamp is active.  `ForwardDiff.hessian`
-computes the exact Hessian *within* each smooth piece, but when the
-optimum sits near the clamp boundary the Hessian can fail to be positive
-definite (PD).  On some platforms — in particular macOS ARM64 (Apple
+**Problem.**  The curvature of the linear link's likelihood grows without limit as a
+fitted variance approaches zero, so when the optimum sits near that boundary the
+Hessian can fail to be positive definite (PD).  On some platforms — in particular macOS ARM64 (Apple
 Silicon) running Julia 1.10 — floating-point evaluation order differs enough
 from x86 that the Hessian is numerically non-PD more frequently.  `inv(H)`
 with a non-PD matrix produces negative diagonal entries in the vcov, making

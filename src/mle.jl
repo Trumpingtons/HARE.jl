@@ -26,13 +26,14 @@ function _hetero_negloglik(theta, X_full, Z_full, y, link)
         log_sigma2 = Z_full * gamma
         return 0.5 * (sum(log_sigma2) + sum(resid.^2 .* exp.(-log_sigma2)))
     elseif link === :quadratic
-        sigma   = Z_full * gamma
-        sigma_c = max.(sigma, 1e-10)
-        return sum(log.(sigma_c)) + 0.5 * sum(resid.^2 ./ sigma_c.^2)
+        sigma = Z_full * gamma
+        # Outside the model: the infinite value makes the line search step back
+        any(<=(0), sigma) && return convert(eltype(sigma), Inf)
+        return sum(log.(sigma)) + 0.5 * sum(resid.^2 ./ sigma.^2)
     else  # :linear
-        sigma2   = Z_full * gamma
-        sigma2_c = max.(sigma2, 1e-10)
-        return 0.5 * (sum(log.(sigma2_c)) + sum(resid.^2 ./ sigma2_c))
+        sigma2 = Z_full * gamma
+        any(<=(0), sigma2) && return convert(eltype(sigma2), Inf)
+        return 0.5 * (sum(log.(sigma2)) + sum(resid.^2 ./ sigma2))
     end
 end
 
@@ -51,9 +52,7 @@ function _hetero_warm_start(X_full, Z_full, y, link)
         any(<=(0), Z_full * gamma0) && (gamma0 = vcat(sqrt(π / 2) * mean(abs.(u)), zeros(size(Z_full, 2) - 1)))
     else  # :linear
         _, gamma0, _ = linear_weights(Z_full, u)
-        # A constant start is always feasible, but it can overshoot into the likelihood's spike at zero
-        # variance when the two-step line has a proper maximum nearby. Fminbox needs gamma_0 above 1e-8.
-        (gamma0[1] <= 1e-8 || any(<=(0), Z_full * gamma0)) && (gamma0 = vcat(mean(u.^2), zeros(size(Z_full, 2) - 1)))
+        any(<=(0), Z_full * gamma0) && (gamma0 = vcat(mean(u.^2), zeros(size(Z_full, 2) - 1)))
     end
     return vcat(beta0, gamma0)
 end
@@ -63,18 +62,10 @@ function _hetero_mle_core(X_full, Z_full, y, link, theta0; tol, maxiter)
     nll = theta -> _hetero_negloglik(theta, X_full, Z_full, y, link)
     # nll sums n terms, so its gradient grows with n: tol applies per observation
     g_tol = tol * n
-    if link === :linear
-        k  = size(X_full, 2)
-        np = length(theta0)
-        lb = fill(-Inf, np); lb[k+1] = 1e-8
-        ub = fill(Inf, np)
-        g! = (G, theta) -> ForwardDiff.gradient!(G, nll, theta)
-        res = optimize(nll, g!, lb, ub, theta0, Fminbox(LBFGS()),
-                       Optim.Options(iterations=maxiter, g_tol=g_tol))
-    else
-        res = optimize(nll, theta0, LBFGS(), Optim.Options(iterations=maxiter, g_tol=g_tol);
-                       autodiff=:forward)
-    end
+    # Backtracking steps back from the infinite value outside the model, where HagerZhang fails an assertion
+    method = link === :linear || link === :quadratic ? LBFGS(linesearch=Optim.LineSearches.BackTracking()) : LBFGS()
+    res = optimize(nll, theta0, method, Optim.Options(iterations=maxiter, g_tol=g_tol);
+                   autodiff=:forward)
     theta_hat = Optim.minimizer(res)
     H         = Symmetric(ForwardDiff.hessian(nll, theta_hat))
     vcov_full = inv(H)
@@ -87,17 +78,22 @@ end
 
 function _hetero_mle(X_full, Z_full, y, link, coefnames, mf; tol, maxiter)
     k         = size(X_full, 2)
-    theta0    = _hetero_warm_start(X_full, Z_full, y, link)
+    # The linear and quadratic gamma have the units of y: fitting y in units of its spread keeps
+    # the search well scaled, and the results are converted back
+    scale       = link === :linear || link === :quadratic ? std(y) : 1.0
+    scale_gamma = link === :linear ? scale^2 : scale
+    y_scaled    = y ./ scale
+    theta0    = _hetero_warm_start(X_full, Z_full, y_scaled, link)
     theta_hat, vcov_full, loglik, conv, iters =
-        _hetero_mle_core(X_full, Z_full, y, link, theta0; tol=tol, maxiter=maxiter)
-    beta       = theta_hat[1:k]
-    gamma      = theta_hat[k+1:end]
+        _hetero_mle_core(X_full, Z_full, y_scaled, link, theta0; tol=tol, maxiter=maxiter)
+    beta       = scale .* theta_hat[1:k]
+    gamma      = scale_gamma .* theta_hat[k+1:end]
     _check_fitted_variance(link, Z_full, gamma, "the maximum likelihood fit is not valid")
-    vcov_beta  = vcov_full[1:k, 1:k]
-    vcov_gamma = vcov_full[k+1:end, k+1:end]
+    vcov_beta  = scale^2 .* vcov_full[1:k, 1:k]
+    vcov_gamma = scale_gamma^2 .* vcov_full[k+1:end, k+1:end]
     f          = X_full * beta
     return MLEResult(beta, coefnames, mf, vcov_beta, y .- f, f,
-                           gamma, vcov_gamma, loglik, link, conv, iters)
+                           gamma, vcov_gamma, loglik - length(y) * log(scale), link, conv, iters)
 end
 
 """

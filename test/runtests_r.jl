@@ -103,12 +103,15 @@
 #   coef(l); coef(summary(l))[, "Std. Error"]
 # }
 #
-# ## quadratic_mle vs crch, whose scale link "identity" is sigma_i = z_i' gamma
+# ## quadratic_mle and linear_mle vs crch, whose scale links "identity" and "quadratic"
+# ## are sigma_i = z_i' gamma and sigma_i^2 = z_i' gamma
 # library(crch)                                         # crch version: 1.2.3
 # d <- exp; d$z <- 1 + abs(d$x1)
 # ctl <- crch.control(method = "BFGS", reltol = 1e-14, maxit = 20000, hessian = TRUE)
-# m <- crch(y ~ x1 + x2 | z, data = d, dist = "gaussian", link.scale = "identity", control = ctl)
-# coef(m, "location"); coef(m, "scale"); logLik(m); sqrt(diag(vcov(m)))[1:3]
+# for (link in c("identity", "quadratic")) {
+#   m <- crch(y ~ x1 + x2 | z, data = d, dist = "gaussian", link.scale = link, control = ctl)
+#   coef(m, "location"); coef(m, "scale"); logLik(m); sqrt(diag(vcov(m)))[1:3]
+# }
 #
 # ## Beach-MacKinnon via nlme::gls (exact AR(1) ML, functional equivalent)
 # library(nlme)                                         # nlme version: 3.1.168
@@ -208,6 +211,11 @@ using StatsBase
     r_quad_se     = [0.053015676526596, 0.069204195902907, 0.052111566314883]
     r_quad_gamma  = [0.356584268207181, 0.504708225142563]
     r_quad_loglik = -818.089070482050
+
+    r_linear_coef   = [0.989930895181245, 1.994976548924659, -1.039364051648521]
+    r_linear_se     = [0.053428566534577, 0.068296473822479, 0.052668401521855]
+    r_linear_gamma  = [-0.562726127072303, 1.247825303323357]
+    r_linear_loglik = -820.362296035448
 
     r_wls_exp_coef    = [0.976106975097229,  1.993231654491679, -1.011174396770982]
     r_wls_exp_se      = [0.049402758160676,  0.030997652998633,  0.029663836650158]
@@ -325,6 +333,16 @@ using StatsBase
         @test stderror(m) ≈ r_quad_se     atol=1e-6
         @test m.gamma     ≈ r_quad_gamma  atol=1e-6
         @test m.loglik    ≈ r_quad_loglik atol=1e-6
+        @test m.converged
+    end
+
+    # ── linear_mle vs crch(link.scale="quadratic"), with a negative gamma_0 ─────
+    @testset "linear_mle vs R (crch 1.2.3)" begin
+        m = linear_mle(X, y_exp; Z = Z_pos)
+        @test coef(m)     ≈ r_linear_coef   atol=1e-6
+        @test stderror(m) ≈ r_linear_se     atol=1e-6
+        @test m.gamma     ≈ r_linear_gamma  atol=1e-6
+        @test m.loglik    ≈ r_linear_loglik atol=1e-6
         @test m.converged
     end
 

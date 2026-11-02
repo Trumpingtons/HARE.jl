@@ -596,6 +596,18 @@ end
     end
 end
 
+@testset "linear and quadratic MLE do not depend on the units of y" begin
+    Z_pos = hcat(1 .+ abs.(x1))
+    for (f, power) in ((linear_mle, 2), (quadratic_mle, 1)), c in (1e-6, 1e4)
+        m, mc = f(X, y_het; Z = Z_pos), f(X, c .* y_het; Z = Z_pos)
+        @test coef(mc)     ≈ c .* coef(m)       rtol=1e-6
+        @test mc.gamma     ≈ c^power .* m.gamma rtol=1e-6
+        @test stderror(mc) ≈ c .* stderror(m)   rtol=1e-6
+        @test mc.loglik    ≈ m.loglik - n * log(c) atol=1e-6
+        @test mc.converged
+    end
+end
+
 @testset "linear and quadratic estimators stop when a fitted value reaches zero" begin
     y_clip = hcat(ones(n), X) * b_true .+ ifelse.(x1 .> 0, 5 .* x1, 0.1) .* randn(MersenneTwister(6), n)
     for f in (linear_fwls, quadratic_fwls, linear_ifwls, quadratic_ifwls, linear_mle, quadratic_mle)

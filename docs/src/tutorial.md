@@ -278,7 +278,7 @@ Std. deviation equation (gamma):
 z1  0.343226    0.0380666   9.02    <1e-18   0.268617   0.417835
 z2  0.0137392   0.021326    0.64    0.5194  -0.0280591  0.0555374
 ─────────────────────────────────────────────────────────────────
-Log-likelihood: -546.9842   Converged: true   Iterations: 10
+Log-likelihood: -546.9842   Converged: true   Iterations: 16
 N: 500   R^2: 0.9003   Adj. R^2: 0.8999
 
 ````
@@ -321,7 +321,7 @@ Variance equation (gamma):
 z1   0.266642    0.0968623  2.75    0.0059   0.0767957   0.456489
 z2   0.0289895   0.0432038  0.67    0.5022  -0.0556885   0.113667
 ─────────────────────────────────────────────────────────────────
-Log-likelihood: -642.3411   Converged: true   Iterations: 4
+Log-likelihood: -642.3411   Converged: true   Iterations: 16
 N: 500   R^2: 0.8856   Adj. R^2: 0.8851
 
 ````
