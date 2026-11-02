@@ -39,9 +39,9 @@ N: 500   R^2: 0.617   Adj. R^2: 0.6154
 ─────────────────────────────────────────────────────────────────────────
                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ─────────────────────────────────────────────────────────────────────────
-(Intercept)   1.01124   0.0837127   12.08    &lt;1e-28   0.846768   1.17572
-x1            1.90355   0.12354     15.41    &lt;1e-43   1.66082    2.14627
-x2           -1.02852   0.08088    -12.72    &lt;1e-31  -1.18743   -0.869612
+(Intercept)   1.01124   0.0618224   16.36    &lt;1e-47   0.889777   1.13271
+x1            1.90355   0.0912355   20.86    &lt;1e-69   1.72429    2.0828
+x2           -1.02852   0.0597304  -17.22    &lt;1e-51  -1.14588   -0.911166
 ─────────────────────────────────────────────────────────────────────────
 Log-variance equation (gamma):
 ─────────────────────────────────────────────────────────────────────
@@ -58,9 +58,9 @@ exponential_fwls(X, y; Z = Z_h)</code></pre><pre><code class="nohighlight hljs">
 ─────────────────────────────────────────────────────────────────────────
                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ─────────────────────────────────────────────────────────────────────────
-(Intercept)   1.01124   0.0837127   12.08    &lt;1e-28   0.846768   1.17572
-x1            1.90355   0.12354     15.41    &lt;1e-43   1.66082    2.14627
-x2           -1.02852   0.08088    -12.72    &lt;1e-31  -1.18743   -0.869612
+(Intercept)   1.01124   0.0618224   16.36    &lt;1e-47   0.889777   1.13271
+x1            1.90355   0.0912355   20.86    &lt;1e-69   1.72429    2.0828
+x2           -1.02852   0.0597304  -17.22    &lt;1e-51  -1.14588   -0.911166
 ─────────────────────────────────────────────────────────────────────────
 Log-variance equation (gamma):
 ─────────────────────────────────────────────────────────────────────
@@ -97,9 +97,9 @@ N: 500   R^2: 0.8743   Adj. R^2: 0.8738
 ─────────────────────────────────────────────────────────────────────────
                 Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ─────────────────────────────────────────────────────────────────────────
-(Intercept)   1.00132   0.011958    83.74    &lt;1e-99   0.977826   1.02481
-x1            1.99449   0.022658    88.03    &lt;1e-99   1.94997    2.03901
-x2           -1.00398   0.0109698  -91.52    &lt;1e-99  -1.02553   -0.982426
+(Intercept)   1.00132   0.0237829   42.10    &lt;1e-99   0.954593   1.04805
+x1            1.99449   0.0450638   44.26    &lt;1e-99   1.90595    2.08303
+x2           -1.00398   0.0218175  -46.02    &lt;1e-99  -1.04684   -0.961113
 ─────────────────────────────────────────────────────────────────────────
 Power variance equation (log σ², 2δ):
 ────────────────────────────────────────────────────────────────────
@@ -185,9 +185,9 @@ N: 500   R^2: 0.7613   Adj. R^2: 0.7603
 ──────────────────────────────────────────────────────────────────────────
                  Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   0.997978   0.0281327   35.47    &lt;1e-99   0.942704    1.05325
-x1            2.0166     0.0258966   77.87    &lt;1e-99   1.96572     2.06748
-x2           -0.944209   0.0271733  -34.75    &lt;1e-99  -0.997597   -0.89082
+(Intercept)   0.997978   0.0355591   28.07    &lt;1e-99   0.928113   1.06784
+x1            2.0166     0.0327327   61.61    &lt;1e-99   1.95229    2.08092
+x2           -0.944209   0.0343464  -27.49    &lt;1e-99  -1.01169   -0.876727
 ──────────────────────────────────────────────────────────────────────────
 Group variances (G = 4):
   Group              n_g            σ²           σ
@@ -338,7 +338,7 @@ Power variance equation (log σ², 2δ):
 log σ²  -0.0390182   0.0750069  -0.52    0.6029  -0.186029   0.107993
 z1       0.954741    0.0718746  13.28    &lt;1e-39   0.813869   1.09561
 ─────────────────────────────────────────────────────────────────────
-Log-likelihood: -565.8042   Converged: true   Iterations: 11
+Log-likelihood: -565.8042   Converged: true   Iterations: 10
 N: 500   R^2: 0.8838   Adj. R^2: 0.8833
 </code></pre><h3 id="Groupwise-MLE"><a class="docs-heading-anchor" href="#Groupwise-MLE">Groupwise MLE</a><a id="Groupwise-MLE-1"></a><a class="docs-heading-anchor-permalink" href="#Groupwise-MLE" title="Permalink"></a></h3><p>R code:</p><pre><code class="language-r hljs">d &lt;- read.csv(&quot;hare_gw.csv&quot;)
 d$group &lt;- factor(d$group)
@@ -418,9 +418,9 @@ data_hae = (y = y_hae, x1 = x1, x2 = x2);</code></pre><p><strong>Sequential HARE
 ──────────────────────────────────────────────────────────────────────────
                  Coef.  Std. Error       t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   1.0166     0.331721     3.06    0.0023   0.364854   1.66835
-x1            1.9606     0.0757041   25.90    &lt;1e-93   1.81186    2.10933
-x2           -0.955632   0.0655662  -14.58    &lt;1e-39  -1.08445   -0.826811
+(Intercept)   1.0166     0.241331     4.21    &lt;1e-04   0.542447   1.49076
+x1            1.9606     0.0550756   35.60    &lt;1e-99   1.85239    2.0688
+x2           -0.955632   0.0477002  -20.03    &lt;1e-65  -1.04935   -0.861913
 ──────────────────────────────────────────────────────────────────────────
 AR(1) coefficient:
 ──────────────────────────────────────────────────────────────
@@ -470,4 +470,4 @@ harvey_test(@formula(y ~ x1 + x2), data_test)</code></pre><pre><code class="nohi
 </code></pre><p><strong>Glejser test</strong> – LM statistic from the auxiliary regression of <span>$|\hat{u}_i|$</span> on <span>$Z$</span>:</p><pre><code class="language-julia hljs">glejser_test(@formula(y ~ x1 + x2), data_test)</code></pre><pre><code class="nohighlight hljs">Glejser test for heteroskedasticity (quadratic link / linear SD)
   H₀: γ = 0  in  σᵢ = γ₀ + zᵢ&#39;γ
   LM = 2.3974   df = 2   p-value = 0.3016
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 28 October 2026 18:16">Wednesday 28 October 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 2 November 2026 23:34">Monday 2 November 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
