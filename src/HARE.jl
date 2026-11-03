@@ -14,7 +14,6 @@ using Statistics
 using Random
 using StatsModels
 using Tables
-using GLM
 using Optim
 using ForwardDiff
 using Distributions
@@ -22,8 +21,11 @@ using HypothesisTests: BreuschPaganTest, WhiteTest, BreuschGodfreyTest, DurbinWa
 import StatsBase
 import StatsAPI
 using StatsAPI: pvalue, dof
+using StatsBase: coef, coefnames, coeftable, confint, vcov, stderror, residuals, fitted, predict, response,
+    responsename, nobs, dof_residual, loglikelihood, r2, adjr2, rss, islinear
 
 export HAREModel
+export OLSResult
 export FWLSResult
 export AR1Result, AR1Result, AR1Result, SequentialResult, JointResult, AR1Result, MLEResult, GroupwiseResult
 export tstat, pvalues, sigma2
@@ -32,6 +34,10 @@ export HarveyTestResult, GlejserTestResult
 export harvey_test, glejser_test
 export breusch_pagan_test, white_test, durbin_watson_test, breusch_godfrey_test
 export pvalue, dof
+export coef, coefnames, coeftable, confint, vcov, stderror, residuals, fitted, predict, response
+export responsename, nobs, dof_residual, loglikelihood, r2, adjr2, rss, islinear
+export @formula
+export ols
 export exponential_fwls, exponential_ifwls
 export quadratic_fwls, quadratic_ifwls
 export linear_fwls, linear_ifwls
@@ -50,6 +56,7 @@ include("interfaces.jl")
 include("show.jl")
 include("auxiliary.jl")
 include("tests.jl")
+include("ols.jl")
 include("fwls.jl")
 include("mle.jl")
 

@@ -51,9 +51,9 @@ function two_step_prais_winsten(X, y; intercept::Bool = true,
                                coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],
                                mf=nothing)
     X              = intercept ? hcat(ones(eltype(X), size(X,1)), X) : X
-    rho            = estimate_rho(residuals(lm(X, y)))
+    rho            = estimate_rho(residuals(_ls(X, y)))
     ystar, Xstar   = pw_transform(X, y, rho)
-    model          = lm(Xstar, ystar)
+    model          = _ls(Xstar, ystar)
     beta           = coef(model)
     f              = X * beta
     return AR1Result(beta, coefnames, mf, vcov(model), y .- f, f, rho, NaN, NaN, 1, true, :prais_winsten)
@@ -97,12 +97,12 @@ function iterated_prais_winsten(X, y; intercept::Bool = true, tol=1e-8, maxiter=
                                coefnames::Vector{String} = intercept ? ["(Intercept)"; ["x$i" for i in 1:size(X,2)]] : ["x$i" for i in 1:size(X,2)],
                                mf=nothing)
     X     = intercept ? hcat(ones(eltype(X), size(X,1)), X) : X
-    rho   = estimate_rho(residuals(lm(X, y)))
-    model = lm(X, y)
+    rho   = estimate_rho(residuals(_ls(X, y)))
+    model = _ls(X, y)
     for i in 1:maxiter
         rho_old      = rho
         ystar, Xstar = pw_transform(X, y, rho)
-        model        = lm(Xstar, ystar)
+        model        = _ls(Xstar, ystar)
         rho          = estimate_rho(y .- X * coef(model))
         if abs(rho - rho_old) < tol
             beta = coef(model)

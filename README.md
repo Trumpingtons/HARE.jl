@@ -24,6 +24,10 @@ Pkg.add(url = "https://github.com/Trumpingtons/HARE.jl")
 
 ## Estimators
 
+### OLS benchmark
+
+`ols(X, y)` and `ols(@formula(y ~ x1 + x2), data)` fit ordinary least squares with the classical covariance matrix and return `OLSResult`, with the same interface as the corrected estimators, so the two can be compared side by side.
+
 ### Heteroskedasticity only
 
 Four variance functions are available, each on auxiliary regressors `Z` (without a constant column; a constant is prepended, and `Z` defaults to `X`). Each has a two-step FWLS estimator (one auxiliary regression, then WLS), an iterated FWLS estimator that alternates until convergence, and a maximum likelihood estimator.

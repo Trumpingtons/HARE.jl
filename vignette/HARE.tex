@@ -51,7 +51,7 @@
    by weights you give it, and robust standard errors leave the estimates as they are.}
   {\fn{HARE.jl} (Heteroskedasticity and Autocorrelation Estimators), from GitHub:
    \fn{Pkg.add(url = "https://github.com/Trumpingtons/HARE.jl")}.}
-  {1,355 tests of every estimator and test; 70 against R (prais, orcutt, skedastic, nlme, crch, lm) on the same data;
+  {1,420 tests of every estimator and test; 70 against R (prais, orcutt, skedastic, nlme, crch, lm) on the same data;
    33 that recover the parameters from a million observations.}
 
 \nmsection{Why a package}
@@ -145,7 +145,7 @@ $\log\sigma_t^2 = x_{1t}$, the first $u$ drawn from the stationary distribution,
 from \fn{StableRNG(2026)}.
 \begin{nbox}{}
 \ttfamily\small
-using HARE, GLM, StableRNGs\\
+using HARE, StableRNGs\\
 rng = StableRNG(2026); n = 500\\
 x1 = randn(rng, n); x2 = randn(rng, n); sigma = exp.(0.5 .* x1); e = randn(rng, n)\\
 u = zeros(n); u[1] = sigma[1] * e[1] / sqrt(1 - 0.7\^{}2)\\
@@ -163,7 +163,7 @@ autocorrelation also weakens Harvey's test, whose residuals are not independent.
 \nmsub{Four estimators}
 \begin{valuetable}{@{}lccccc@{}}
 \textbf{Estimator} & \textbf{$x_1$ (2)} & \textbf{s.e.} & \textbf{$x_2$ ($-1$)} & \textbf{$\rho$ (0.7)} & \textbf{$\gamma_1$ (1)}\\\midrule
-OLS, \fn{lm(f, data)} & 2.178 & 0.088 & $-0.928$ & --- & ---\\
+OLS, \fn{ols(f, data)} & 2.178 & 0.088 & $-0.928$ & --- & ---\\
 \fn{iterated\_prais\_winsten} & 2.084 & 0.048 & $-0.981$ & 0.714 & ---\\
 \fn{exponential\_mle(...; Z = Zf)} & 2.105 & 0.083 & $-0.966$ & --- & 0.327\\
 \fn{iterated\_sequential(...; Z = Zf)} & 2.032 & 0.031 & $-0.985$ & 0.715 & 0.937\\
@@ -259,6 +259,13 @@ data $Z = x_1$ gives fitted values below zero and both stop with the error above
 With a million observations from \fn{StableRNG(123)}, 33 tests check that the two-step FWLS of each link, the MLEs, the
 four AR(1) estimators, the groupwise estimators and the sequential and joint estimators recover $\boldsymbol\beta$,
 $\boldsymbol\gamma$, $\rho$ and the group variances within 0.01 (\fn{test/runtests\_consistency.jl}, about 4 minutes).
+
+\nmsub{One sample and many}
+A single sample can sit some way from the truth. The Pollis panel \emph{Linear Models with Autocorrelation} simulates
+300 periods with $\rho = 0.7$ from \fn{Random.seed!(1)}, and \fn{beach\_mackinnon} gives $\hat\rho = 0.589$. That is
+the sample and not the estimator: the simulated errors themselves have a first-order autocorrelation of 0.604. Over
+seeds 2 to 201 of the same design, $\hat\rho$ has mean 0.691 and standard deviation 0.045, close to the asymptotic
+$\sqrt{(1-\rho^2)/T} = 0.041$, so seed 1 lies about 2.5 standard deviations below the truth.
 
 \nmsub{The rest}
 \fn{test/runtests.jl}, 1,355 tests in 33 sets, on 200 observations with known parameters: each estimator by formula and

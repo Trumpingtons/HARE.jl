@@ -78,7 +78,7 @@ Amemiya, T. (1985). *Advanced Econometrics*. Harvard University Press.
 const _HARVEY_C = -1.2703628454614782   # E[log(χ²(1))] = digamma(1/2) + log(2)
 
 function exponential_weights(Z, u)
-    aux   = lm(Z, log.(u.^2) .- _HARVEY_C)
+    aux   = _ls(Z, log.(u.^2) .- _HARVEY_C)
     gamma = coef(aux)
     return 1.0 ./ exp.(fitted(aux)), gamma, vcov(aux)
 end
@@ -105,7 +105,7 @@ American Statistical Association*, 64(325), 316-323.
 function quadratic_weights(Z, u)
     # E[|eps_i|] = sqrt(2/pi) for eps_i ~ N(0,1), so OLS of |u| on Z converges to
     # gamma * sqrt(2/pi).  Multiply by sqrt(pi/2) to obtain consistent gamma estimates.
-    aux       = lm(Z, abs.(u))
+    aux       = _ls(Z, abs.(u))
     c         = sqrt(π / 2)
     gamma     = coef(aux) .* c
     sigma_hat = fitted(aux) .* c
@@ -114,13 +114,13 @@ end
 
 function power_weights(Z, u)
     Z_log = hcat(Z[:, 1:1], log.(max.(abs.(Z[:, 2:end]), 1e-10)))
-    aux   = lm(Z_log, log.(u.^2) .- _HARVEY_C)
+    aux   = _ls(Z_log, log.(u.^2) .- _HARVEY_C)
     gamma = coef(aux)   # (log σ², 2δ₁, …) — exact, no delta method
     return 1.0 ./ exp.(fitted(aux)), gamma, vcov(aux)
 end
 
 function linear_weights(Z, u)
-    aux    = lm(Z, u.^2)
+    aux    = _ls(Z, u.^2)
     gamma  = coef(aux)
     return 1.0 ./ fitted(aux), gamma, vcov(aux)
 end
@@ -137,11 +137,45 @@ function _check_fitted_variance(link, Z, gamma, consequence)
     throw(ArgumentError("$equation equation: $failed of $(size(Z, 1)) fitted $(quantity)s are zero or negative, so $consequence. A straight line does not describe the $quantity on these data. Use the Exponential or Power form, or OLS with robust standard errors."))
 end
 
-# Weighted least squares with inverse-variance weights. GLM takes weights as frequency
-# weights, with sum(w) - k residual degrees of freedom, and sum(w) changes with the units
-# of y. Rescaled to sum to n, the weights leave the coefficients unchanged and give a
-# dispersion of sum(w e^2) / (n - k), so the standard errors scale with y.
-_wls(X, y, w) = lm(X, y, weights = w .* (length(w) / sum(w)))
+# A least squares fit: coefficients, covariance matrix, residuals y - X*beta and fitted values.
+struct LeastSquaresFit
+    coef::Vector{Float64}
+    vcov::Matrix{Float64}
+    residuals::Vector{Float64}
+    fitted::Vector{Float64}
+end
+
+StatsBase.coef(f::LeastSquaresFit)      = f.coef
+StatsBase.vcov(f::LeastSquaresFit)      = f.vcov
+StatsBase.residuals(f::LeastSquaresFit) = f.residuals
+StatsBase.fitted(f::LeastSquaresFit)    = f.fitted
+
+# Least squares by a Householder QR decomposition of sqrt(w) .* X, with the covariance
+# s^2 (X'WX)^(-1) = s^2 R^(-1) R^(-T) and s^2 = sum(w e^2) / (n - k). Without weights, w = 1.
+function _ls(X::AbstractMatrix, y::AbstractVector; weights::Union{Nothing, AbstractVector} = nothing)
+    Xf   = Matrix{Float64}(X)
+    yf   = Vector{Float64}(y)
+    n, k = size(Xf)
+    n > k || throw(ArgumentError("least squares needs more observations ($n) than coefficients ($k)"))
+    sw   = isnothing(weights) ? ones(n) : sqrt.(Vector{Float64}(weights))
+    F    = qr(sw .* Xf)
+    R    = UpperTriangular(F.R)
+    d    = abs.(diag(R))
+    minimum(d) > n * eps() * maximum(d) ||
+        throw(ArgumentError("the regressor matrix is rank deficient: a column is a linear combination of the others"))
+    beta = R \ (transpose(F.Q) * (sw .* yf))[1:k]
+    f    = Xf * beta
+    e    = yf .- f
+    s2   = sum(abs2, sw .* e) / (n - k)
+    Rinv = inv(R)
+    V    = s2 .* (Rinv * transpose(Rinv))
+    return LeastSquaresFit(beta, (V .+ transpose(V)) ./ 2, e, f)
+end
+
+# Weighted least squares with inverse-variance weights. Rescaled to sum to n, the weights
+# leave the coefficients unchanged and give a dispersion of sum(w e^2) / (n - k), so the
+# standard errors scale with the units of y.
+_wls(X, y, w) = _ls(X, y; weights = w .* (length(w) / sum(w)))
 
 """
     pw_transform(X, y, rho) -> (ystar, Xstar)

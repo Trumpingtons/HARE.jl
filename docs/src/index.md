@@ -8,6 +8,7 @@ AR(1) autocorrelation, and their combination:
 
 | Error structure | Estimators / Tests |
 |:----------------|:-----------|
+| None (benchmark) | [`ols`](@ref) |
 | Exponential variance (Harvey) | [`exponential_fwls`](@ref), [`exponential_mle`](@ref), [`harvey_test`](@ref) |
 | Power variance | [`power_fwls`](@ref), [`power_mle`](@ref) |
 | Quadratic variance (Glejser) | [`quadratic_fwls`](@ref), [`quadratic_mle`](@ref), [`glejser_test`](@ref) |

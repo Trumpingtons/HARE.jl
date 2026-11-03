@@ -14,7 +14,7 @@ warm starts.  Standard errors come from the inverse observed information matrix.
 
 For groupwise heteroskedasticity the MLE is computed via coordinate descent
 (the same iteration as iterated_groupwise) with standard errors from the
-exact observed information matrix (X′WX)⁻¹, not GLM's dispersion-scaled vcov.
+exact observed information matrix (X′WX)⁻¹, not the dispersion-scaled WLS covariance.
 """
 
 function _hetero_negloglik(theta, X_full, Z_full, y, link)
@@ -38,13 +38,13 @@ function _hetero_negloglik(theta, X_full, Z_full, y, link)
 end
 
 function _hetero_warm_start(X_full, Z_full, y, link)
-    ols   = lm(X_full, y)
+    ols   = _ls(X_full, y)
     u     = residuals(ols)
     beta0 = coef(ols)
     if link === :exponential
         _, gamma0, _ = exponential_weights(Z_full, u)
     elseif link === :power
-        aux    = lm(Z_full, log.(u.^2) .- _HARVEY_C)
+        aux    = _ls(Z_full, log.(u.^2) .- _HARVEY_C)
         gamma0 = coef(aux)
     elseif link === :quadratic
         _, gamma0, _ = quadratic_weights(Z_full, u)
@@ -327,8 +327,8 @@ These are solved by coordinate descent (alternating WLS and variance updates)
 until ``\\max|\\hat{\\boldsymbol{\\beta}}^{(t)} - \\hat{\\boldsymbol{\\beta}}^{(t-1)}| < \\texttt{tol}``.
 
 Standard errors come from the exact observed information matrix
-``(\\mathbf{X}^\\top\\mathbf{W}\\mathbf{X})^{-1}``, **not** from GLM's
-dispersion-scaled covariance. This is the key difference from
+``(\\mathbf{X}^\\top\\mathbf{W}\\mathbf{X})^{-1}``, **not** from the
+dispersion-scaled WLS covariance. This is the key difference from
 [`iterated_groupwise`](@ref), which gives identical point estimates but
 slightly different standard errors in finite samples.
 
@@ -356,7 +356,7 @@ function groupwise_mle(X, y, groups; intercept::Bool = true, tol = 1e-8, maxiter
     glabels = _gw_labels(groups)
     gsizes  = [count(==(g), groups) for g in glabels]
 
-    beta   = coef(lm(X_full, y))
+    beta   = coef(_ls(X_full, y))
     sigma2 = _gw_sigma2(y .- X_full * beta, groups, glabels)
 
     local w

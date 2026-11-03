@@ -23,7 +23,7 @@
 # ```
 
 using HARE
-using Random, LinearAlgebra, GLM, StatsBase
+using Random, LinearAlgebra, StatsBase
 
 Random.seed!(1234)
 
@@ -165,7 +165,7 @@ data_gw  = (y = y_gw, x1 = x1, x2 = x2);
 # **MLE** (`groupwise_mle`): exact MLE standard errors from $(X^\top W X)^{-1}$:
 groupwise_mle(@formula(y ~ x1 + x2), data_gw, groups)
 
-# **Iterated FWLS** (`iterated_groupwise`): identical point estimates, GLM-scaled standard errors:
+# **Iterated FWLS** (`iterated_groupwise`): identical point estimates, dispersion-scaled standard errors:
 iterated_groupwise(@formula(y ~ x1 + x2), data_gw, groups)
 
 # ## AR(1) Estimators

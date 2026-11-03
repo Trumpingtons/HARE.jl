@@ -8,6 +8,31 @@ Subtypes support the StatsBase interface: `coef`, `stderror`, `vcov`,
 abstract type HAREModel <: StatsBase.RegressionModel end
 
 """
+    OLSResult <: HAREModel
+
+Result of an ordinary least squares fit, with the classical covariance
+matrix. Returned by [`ols`](@ref).
+
+# Fields
+- `coef`      : coefficient vector beta_hat.
+- `coefnames` : coefficient names.
+- `mf`        : `ModelFrame` from formula fit; `nothing` for matrix fit.
+- `vcov`      : estimated covariance matrix of beta_hat, sigma2_hat * inv(X'X).
+- `residuals` : residuals, y - X*beta_hat.
+- `fitted`    : fitted values X*beta_hat.
+- `loglik`    : Gaussian log-likelihood at the estimates.
+"""
+struct OLSResult <: HAREModel
+    coef::Vector{Float64}
+    coefnames::Vector{String}
+    mf::Any
+    vcov::Matrix{Float64}
+    residuals::Vector{Float64}
+    fitted::Vector{Float64}
+    loglik::Float64
+end
+
+"""
     FWLSResult <: HAREModel
 
 Result of a Feasible Weighted Least Squares (FWLS) estimator for
@@ -195,7 +220,7 @@ Result of a groupwise heteroskedasticity estimator ([`two_step_groupwise`](@ref)
 - `coef`        : coefficient vector beta_hat.
 - `coefnames`   : coefficient names.
 - `mf`          : `ModelFrame` from formula fit; `nothing` for matrix fit.
-- `vcov`        : estimated covariance matrix of beta_hat. For `groupwise_mle` this is (X′WX)⁻¹; for FWLS estimators it is GLM's dispersion-scaled WLS covariance.
+- `vcov`        : estimated covariance matrix of beta_hat. For `groupwise_mle` this is (X′WX)⁻¹; for FWLS estimators it is the dispersion-scaled WLS covariance.
 - `residuals`   : residuals in the original space, y - X*beta_hat.
 - `fitted`      : fitted values X*beta_hat.
 - `group_labels`: group identifiers (one per group, in order of first occurrence).

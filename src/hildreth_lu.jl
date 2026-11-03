@@ -43,7 +43,7 @@ function hildreth_lu(X, y; intercept::Bool = true, nrho=200,
     for rho in range(-0.99, 0.99, length=nrho)
         ystar = y[2:end] .- rho .* y[1:end-1]
         Xstar = X[2:end, :] .- rho .* X[1:end-1, :]
-        model = lm(Xstar, ystar)
+        model = _ls(Xstar, ystar)
         rss   = sum(residuals(model).^2)
         if rss < best_rss
             best_rss   = rss

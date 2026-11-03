@@ -47,9 +47,9 @@ function two_step_sequential(X, y; intercept::Bool = true, Z=nothing,
     n                    = length(y)
     X                    = intercept ? hcat(ones(eltype(X), n), X) : X
     Z_full               = isnothing(Z) ? X : hcat(ones(n), Z)
-    rho                  = estimate_rho(residuals(lm(X, y)))
+    rho                  = estimate_rho(residuals(_ls(X, y)))
     ystar, Xstar         = pw_transform(X, y, rho)
-    u_pw                 = residuals(lm(Xstar, ystar))
+    u_pw                 = residuals(_ls(Xstar, ystar))
     w, gamma, gamma_vcov = exponential_weights(Z_full, u_pw)
     model                = _wls(Xstar, ystar, w)
     beta                 = coef(model)
@@ -100,7 +100,7 @@ function iterated_sequential(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, 
     n          = length(y)
     X          = intercept ? hcat(ones(eltype(X), n), X) : X
     Z_full     = isnothing(Z) ? X : hcat(ones(n), Z)
-    model      = lm(X, y)
+    model      = _ls(X, y)
     rho        = estimate_rho(residuals(model))
     gamma      = zeros(size(Z_full, 2))
     gamma_vcov = zeros(size(Z_full, 2), size(Z_full, 2))
@@ -108,7 +108,7 @@ function iterated_sequential(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, 
         beta_old             = coef(model)
         rho_old              = rho
         ystar, Xstar         = pw_transform(X, y, rho)
-        u_pw                 = residuals(lm(Xstar, ystar))
+        u_pw                 = residuals(_ls(Xstar, ystar))
         w, gamma, gamma_vcov = exponential_weights(Z_full, u_pw)
         model                = _wls(Xstar, ystar, w)
         rho                  = estimate_rho(y .- X * coef(model))

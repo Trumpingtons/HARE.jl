@@ -43,9 +43,9 @@ end
 
 # Return unconstrained starting values (atanh(rho0), gamma0) from OLS residuals.
 function _joint_init(X, y, Z)
-    u     = residuals(lm(X, y))
+    u     = residuals(_ls(X, y))
     rho0  = clamp(estimate_rho(u), -0.99, 0.99)
-    gamma0 = coef(lm(Z, log.(u.^2) .- _HARVEY_C))
+    gamma0 = coef(_ls(Z, log.(u.^2) .- _HARVEY_C))
     return atanh(rho0), gamma0
 end
 
@@ -147,7 +147,7 @@ function two_step_joint(X, y; intercept::Bool = true, Z=nothing,
     rho_hat, gamma_hat, gamma_vcov, ll, conv = _joint_opt_concentrated(X, y, Z)
     sigma_hat                            = sqrt.(exp.(Z * gamma_hat))
     ystar2, Xstar2                       = _joint_transform(X, y, rho_hat, sigma_hat)
-    model                                = lm(Xstar2, ystar2)
+    model                                = _ls(Xstar2, ystar2)
     beta_hat                             = coef(model)
     f                                    = X * beta_hat
     ll                                   = _joint_loglik(rho_hat, gamma_hat, X, y, Z, beta_hat)
@@ -201,7 +201,7 @@ function iterated_joint(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, maxit
     n               = length(y)
     X               = intercept ? hcat(ones(eltype(X), n), X) : X
     Z               = isnothing(Z) ? X : hcat(ones(n), Z)
-    beta            = coef(lm(X, y))
+    beta            = coef(_ls(X, y))
     rho_unc, gamma  = _joint_init(X, y, Z)
     rho             = tanh(rho_unc)
     gamma_vcov      = zeros(size(Z, 2), size(Z, 2))
@@ -216,7 +216,7 @@ function iterated_joint(X, y; intercept::Bool = true, Z=nothing, tol=1e-8, maxit
 
         sigma          = sqrt.(exp.(Z * gamma))
         ystar2, Xstar2 = _joint_transform(X, y, rho, sigma)
-        model          = lm(Xstar2, ystar2)
+        model          = _ls(Xstar2, ystar2)
         beta           = coef(model)
 
         if max(maximum(abs.(beta .- beta_old)), abs(rho - rho_old)) < tol

@@ -25,6 +25,8 @@ function _gamma_coeftable(gamma, gamma_vcov, intercept_name::String)
     )
 end
 
+_show_extra(io::IO, m::OLSResult) = println(io, "Log-likelihood: $(round(m.loglik, digits=4))")
+
 function _show_extra(io::IO, m::FWLSResult)
     label, intercept_name = if m.link === :exponential
         "Log-variance equation (gamma):", "log σ₀²"

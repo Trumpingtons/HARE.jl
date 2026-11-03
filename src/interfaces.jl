@@ -6,6 +6,7 @@ Implements the standard statistical interface for all result types:
 """
 
 StatsBase.islinear(m::HAREModel)                    = true
+StatsBase.loglikelihood(m::OLSResult)              = m.loglik
 StatsBase.loglikelihood(m::AR1Result)              = m.loglik
 StatsBase.loglikelihood(m::JointResult)            = m.loglik
 StatsBase.loglikelihood(m::MLEResult)        = m.loglik

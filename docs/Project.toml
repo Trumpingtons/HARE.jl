@@ -1,7 +1,6 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
 HARE = "c3211d7c-c9a0-4605-8ae2-d201a0abc067"
 HypothesisTests = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
@@ -12,7 +11,6 @@ StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 
 [compat]
 Documenter = "1"
-GLM = "1"
 Literate = "2"
 StableRNGs = "1"
 StatsBase = "0.34"

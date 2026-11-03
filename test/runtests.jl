@@ -95,6 +95,46 @@ function check_interface(m, y, n, k; check_r2_bounds=true)
     @test adjr2(m)  ≈ 1 - (1 - r2(m)) * (nobs(m) - 1) / dof_residual(m)
 end
 
+@testset "ols" begin
+    m = ols(X, y_het)
+    @test m isa OLSResult
+    check_interface(m, y_het, n, k)
+
+    m2 = ols(@formula(y ~ x1 + x2), data_het)
+    @test coefnames(m2) == ["(Intercept)", "x1", "x2"]
+end
+
+@testset "ols agrees with GLM's lm" begin
+    # two independent implementations: HARE's QR least squares and GLM's Cholesky, so agreement to rounding
+    newdata = (x1 = randn(5), x2 = randn(5))
+    Xnew    = hcat(ones(5), newdata.x1, newdata.x2)
+    fits = [
+        ("matrix",  ols(X, y_het),                          lm(hcat(ones(n), X), y_het),        Xnew),
+        ("formula", ols(@formula(y ~ x1 + x2), data_het), lm(@formula(y ~ x1 + x2), data_het), newdata),
+    ]
+    for (name, m, g, new) in fits
+        @testset "$name" begin
+            tg = coeftable(g)
+            th = coeftable(m)
+            @test coef(m)          ≈ coef(g)           rtol=1e-10
+            @test vcov(m)          ≈ vcov(g)           rtol=1e-10
+            @test stderror(m)      ≈ stderror(g)       rtol=1e-10
+            @test residuals(m)     ≈ residuals(g)      rtol=1e-10
+            @test fitted(m)        ≈ fitted(g)         rtol=1e-10
+            @test predict(m, new)  ≈ predict(g, new)   rtol=1e-10
+            @test loglikelihood(m) ≈ loglikelihood(g)  rtol=1e-10
+            @test nobs(m)          == nobs(g)
+            @test dof_residual(m)  == dof_residual(g)
+            @test rss(m)           ≈ deviance(g)       rtol=1e-10
+            @test r2(m)            ≈ r2(g)             rtol=1e-10
+            @test adjr2(m)         ≈ adjr2(g)          rtol=1e-10
+            @test confint(m)       ≈ confint(g)        rtol=1e-10
+            @test th.cols[3]       ≈ tg.cols[3]        rtol=1e-10   # t statistics
+            @test th.cols[4]       ≈ tg.cols[4]        rtol=1e-10   # p-values
+        end
+    end
+end
+
 @testset "exponential_fwls" begin
     m = exponential_fwls(X, y_het)
     @test m isa FWLSResult && m.link === :exponential

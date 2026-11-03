@@ -8,6 +8,7 @@ HARE
 
 ```@docs
 HAREModel
+OLSResult
 FWLSResult
 MLEResult
 AR1Result
@@ -18,6 +19,12 @@ HarveyTestResult
 GlejserTestResult
 WaldTestResult
 LRTestResult
+```
+
+## Ordinary Least Squares
+
+```@docs
+ols
 ```
 
 ## Heteroskedasticity FWLS Estimators

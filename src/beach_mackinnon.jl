@@ -50,7 +50,7 @@ function beach_mackinnon(X, y; intercept::Bool = true, tol=1e-10,
     result       = optimize(neg_loglik, -0.999, 0.999, Brent(); abs_tol = tol)
     rho_hat      = Optim.minimizer(result)
     ystar, Xstar = pw_transform(X, y, rho_hat)
-    model        = lm(Xstar, ystar)
+    model        = _ls(Xstar, ystar)
     beta         = coef(model)
     f            = X * beta
     return AR1Result(beta, coefnames, mf, vcov(model), y .- f, f, rho_hat, -Optim.minimum(result), NaN, 0, Optim.converged(result), :beach_mackinnon)

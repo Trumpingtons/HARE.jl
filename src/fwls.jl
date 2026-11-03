@@ -14,7 +14,7 @@ Each model has a two-step variant and an iterated variant.
 # --- Shared FWLS internals ---
 
 function _fwls_two_step(X, y, Z, weight_fn, link, coefnames, mf)
-    w, gamma, gamma_vcov = weight_fn(Z, residuals(lm(X, y)))
+    w, gamma, gamma_vcov = weight_fn(Z, residuals(_ls(X, y)))
     _check_fitted_variance(link, Z, gamma, "the weights cannot be computed")
     model = _wls(X, y, w)
     beta  = coef(model)
@@ -23,7 +23,7 @@ function _fwls_two_step(X, y, Z, weight_fn, link, coefnames, mf)
 end
 
 function _fwls_iterated(X, y, Z, weight_fn, link, coefnames, mf; tol, maxiter)
-    model      = lm(X, y)
+    model      = _ls(X, y)
     gamma      = zeros(size(Z, 2))
     gamma_vcov = zeros(size(Z, 2), size(Z, 2))
     for i in 1:maxiter
@@ -444,7 +444,7 @@ function two_step_groupwise(X, y, groups; intercept::Bool = true,
     glabels = _gw_labels(groups)
     gsizes  = [count(==(g), groups) for g in glabels]
 
-    u      = residuals(lm(X_full, y))
+    u      = residuals(_ls(X_full, y))
     sigma2 = _gw_sigma2(u, groups, glabels)
     w      = _gw_weights(groups, glabels, sigma2)
     model  = _wls(X_full, y, w)
@@ -500,7 +500,7 @@ function iterated_groupwise(X, y, groups; intercept::Bool = true, tol = 1e-8, ma
     glabels = _gw_labels(groups)
     gsizes  = [count(==(g), groups) for g in glabels]
 
-    model  = lm(X_full, y)
+    model  = _ls(X_full, y)
     beta   = coef(model)
     sigma2 = _gw_sigma2(residuals(model), groups, glabels)
 

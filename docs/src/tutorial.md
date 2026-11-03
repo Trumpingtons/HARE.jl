@@ -28,7 +28,7 @@ y_i &= \beta_0+\beta_{1}\, \mathbf{x}_{1i} + \beta_{2}\, \mathbf{x}_{2i} + \vare
 
 ````julia
 using HARE
-using Random, LinearAlgebra, GLM, StatsBase
+using Random, LinearAlgebra, StatsBase
 
 Random.seed!(1234)
 
@@ -374,7 +374,7 @@ N: 500   R^2: 0.7613   Adj. R^2: 0.7603
 
 ````
 
-**Iterated FWLS** (`iterated_groupwise`): identical point estimates, GLM-scaled standard errors:
+**Iterated FWLS** (`iterated_groupwise`): identical point estimates, dispersion-scaled standard errors:
 
 ````julia
 iterated_groupwise(@formula(y ~ x1 + x2), data_gw, groups)

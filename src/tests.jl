@@ -46,9 +46,9 @@ function harvey_test(X::AbstractMatrix, y::AbstractVector;
     n      = length(y)
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
     Z_full = isnothing(Z) ? X_full : hcat(ones(n), Z)
-    e      = residuals(lm(X_full, y))
+    e      = residuals(_ls(X_full, y))
     y_aux  = log.(e.^2) .- _HARVEY_C
-    aux    = lm(Z_full, y_aux)
+    aux    = _ls(Z_full, y_aux)
     ess    = sum((y_aux .- mean(y_aux)).^2) - sum(residuals(aux).^2)
     stat   = max(ess, 0.0) / (π^2 / 2)
     return HarveyTestResult(n, stat, size(Z_full, 2) - 1)
@@ -117,9 +117,9 @@ function glejser_test(X::AbstractMatrix, y::AbstractVector;
     n      = length(y)
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
     Z_full = isnothing(Z) ? X_full : hcat(ones(n), Z)
-    e      = residuals(lm(X_full, y))
+    e      = residuals(_ls(X_full, y))
     y_abs  = abs.(e)
-    aux    = lm(Z_full, y_abs)
+    aux    = _ls(Z_full, y_abs)
     σ̂²    = sum(e.^2) / n
     ess    = sum((y_abs .- mean(y_abs)).^2) - sum(residuals(aux).^2)
     stat   = max(ess, 0.0) / (σ̂² * (1 - 2/π))
@@ -169,7 +169,7 @@ function breusch_pagan_test(X::AbstractMatrix, y::AbstractVector;
                              intercept::Bool = true)
     n      = length(y)
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
-    e      = residuals(lm(X_full, y))
+    e      = residuals(_ls(X_full, y))
     return WhiteTest(float.(X_full), float.(e); type = :linear)
 end
 
@@ -202,7 +202,7 @@ function white_test(X::AbstractMatrix, y::AbstractVector;
                     intercept::Bool = true, type::Symbol = :White)
     n      = length(y)
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
-    e      = residuals(lm(X_full, y))
+    e      = residuals(_ls(X_full, y))
     return WhiteTest(float.(X_full), float.(e); type = type)
 end
 
@@ -238,7 +238,7 @@ function durbin_watson_test(X::AbstractMatrix, y::AbstractVector;
                              intercept::Bool = true)
     n      = length(y)
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
-    e      = residuals(lm(X_full, y))
+    e      = residuals(_ls(X_full, y))
     return DurbinWatsonTest(float.(X_full), float.(e))
 end
 
@@ -272,7 +272,7 @@ function breusch_godfrey_test(X::AbstractMatrix, y::AbstractVector, lag::Int;
                                intercept::Bool = true)
     n      = length(y)
     X_full = intercept ? hcat(ones(eltype(X), n), X) : X
-    e      = residuals(lm(X_full, y))
+    e      = residuals(_ls(X_full, y))
     return BreuschGodfreyTest(float.(X_full), float.(e), lag)
 end
 
